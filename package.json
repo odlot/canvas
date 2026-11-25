@@ -1,0 +1,101 @@
+{
+  "name": "canvas",
+  "displayName": "Canvas",
+  "description": "An infinite canvas for connecting your thoughts and ideas — a JSON Canvas 1.0 editor for VS Code.",
+  "version": "0.0.1",
+  "publisher": "odlot-marco-lutz",
+  "engines": {
+    "vscode": "^1.146.0"
+  },
+  "repository": "https://github.com/odlot/Canvas",
+  "categories": [
+    "Visualization",
+    "Notebooks",
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "canvas.editor",
+        "displayName": "Canvas",
+        "selector": [
+          {
+            "filenamePattern": "*.canvas"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "languages": [
+      {
+        "id": "json",
+        "extensions": [
+          ".canvas"
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "canvas.new",
+        "title": "New Canvas",
+        "category": "Canvas"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "canvas.new",
+          "group": "navigation@9"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "package": "node esbuild.mjs --production",
+    "vscode:prepublish": "npm run package",
+    "typecheck": "tsc -p .",
+    "lint": "eslint src test",
+    "test:unit": "vitest run",
+    "compile-tests": "esbuild test/integration/*.ts --outdir=out/test/integration --platform=node --format=cjs --external:vscode --bundle",
+    "test:integration": "npm run build && npm run compile-tests && vscode-test",
+    "test": "npm run typecheck && npm run lint && npm run test:unit",
+    "dev:harness": "npm run build && echo 'open http://localhost:8765/dev/harness.html' && python3 -m http.server 8765"
+  },
+  "devDependencies": {
+    "@types/dompurify": "^3.0.5",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "24.x",
+    "@types/vscode": "^1.146.0",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.0.0",
+    "@vscode/vsce": "^4.1.1",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.5.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.74.0",
+    "vitest": "^3.2.7"
+  },
+  "overrides": {
+    "diff": "^8.0.4",
+    "serialize-javascript": "^7.0.6"
+  },
+  "dependencies": {
+    "dompurify": "^3.5.0",
+    "highlight.js": "^11.12.0",
+    "marked": "^15.0.12",
+    "pdfjs-dist": "^4.10.38"
+  },
+  "keywords": [
+    "canvas",
+    "json canvas",
+    "whiteboard",
+    "mind map",
+    "notes",
+    "obsidian"
+  ],
+  "icon": "media/icon.png"
+}

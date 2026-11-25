@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!--
+	Browser harness for developing the canvas webview without VS Code.
+	Serve the repo root (e.g. `npm run dev:harness`) and open /dev/harness.html.
+	It fakes the VS Code webview API and serves files from test/fixtures.
+-->
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Canvas harness</title>
+	<link rel="stylesheet" href="../dist/webview.css">
+</head>
+<body class="vscode-dark">
+	<div id="app"></div>
+	<script>
+		window.CANVAS_PDF_WORKER = '../dist/pdf.worker.js';
+		const FIXTURES = '../test/fixtures/';
+		const params = new URLSearchParams(location.search);
+		const canvasFile = params.get('file') || 'sample.canvas';
+		window.__edits = [];
+		window.__sent = [];
+		let state;
+		const send = (m) => { window.__sent.push(m); window.postMessage(m, '*'); };
+		window.acquireVsCodeApi = () => ({
+			getState: () => state,
+			setState: (s) => { state = s; },
+			async postMessage(m) {
+				switch (m.type) {
+					case 'ready': {
+						const text = await (await fetch(FIXTURES + canvasFile)).text();
+						const { parse } = window.__harness;
+						send({ type: 'load', ...parse(text), text });
+						break;
+					}
+					case 'edit':
+						window.__edits.push(m.canvas);
+						break;
+					case 'requestFile': {
+						const r = await fetch(FIXTURES + m.path);
+						const file = { path: m.path, exists: r.ok };
+						if (r.ok) {
+							if (/\.(md|ts|js|py|json)$/.test(m.path)) file.text = await r.text();
+							else file.uri = FIXTURES + m.path;
+						}
+						send({ type: 'file', file });
+						break;
+					}
+					case 'pickFiles':
+						send({ type: 'insertFiles', paths: ['diagram.svg'], at: m.at });
+						break;
+					default:
+						console.log('host message', m);
+				}
+			},
+		});
+	</script>
+	<script type="module">
+		import { parseCanvas } from '../dist/harness-parse.js';
+		window.__harness = { parse: parseCanvas };
+		await import('../dist/webview.js');
+	</script>
+</body>
+</html>

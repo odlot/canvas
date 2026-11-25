@@ -1,0 +1,95 @@
+{
+	"nodes": [
+		{
+			"id": "group-ideas",
+			"type": "group",
+			"x": -460,
+			"y": -300,
+			"width": 960,
+			"height": 640,
+			"label": "Ideas",
+			"color": "5"
+		},
+		{
+			"id": "welcome",
+			"type": "text",
+			"x": -420,
+			"y": -240,
+			"width": 400,
+			"height": 260,
+			"text": "# Welcome to Canvas\n\nAn infinite canvas for connecting your thoughts.\n\n- **Drag** nodes to move them\n- Drag a **side handle** to connect nodes\n- Scroll to pan, `Ctrl/⌘ + scroll` to zoom\n- Double-click empty space to add a note",
+			"color": "6"
+		},
+		{
+			"id": "notes",
+			"type": "file",
+			"x": 60,
+			"y": -240,
+			"width": 400,
+			"height": 300,
+			"file": "notes.md"
+		},
+		{
+			"id": "code",
+			"type": "file",
+			"x": -420,
+			"y": 80,
+			"width": 480,
+			"height": 220,
+			"file": "snippet.ts",
+			"color": "4"
+		},
+		{
+			"id": "image",
+			"type": "file",
+			"x": 560,
+			"y": -240,
+			"width": 300,
+			"height": 200,
+			"file": "diagram.svg"
+		},
+		{
+			"id": "pdf",
+			"type": "file",
+			"x": 560,
+			"y": 20,
+			"width": 300,
+			"height": 400,
+			"file": "paper.pdf"
+		},
+		{
+			"id": "link",
+			"type": "link",
+			"x": 100,
+			"y": 120,
+			"width": 340,
+			"height": 120,
+			"url": "https://jsoncanvas.org/spec/1.0/"
+		}
+	],
+	"edges": [
+		{
+			"id": "e1",
+			"fromNode": "welcome",
+			"fromSide": "right",
+			"toNode": "notes",
+			"toSide": "left",
+			"label": "read more"
+		},
+		{
+			"id": "e2",
+			"fromNode": "welcome",
+			"fromSide": "bottom",
+			"toNode": "code",
+			"toSide": "top",
+			"color": "1"
+		},
+		{
+			"id": "e3",
+			"fromNode": "notes",
+			"toNode": "image",
+			"fromEnd": "arrow",
+			"toEnd": "arrow"
+		}
+	]
+}
