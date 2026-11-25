@@ -80,10 +80,8 @@ dev/harness.html browser harness that mocks the VS Code API
 code --install-extension canvas-<version>.vsix
 ```
 
-Releases are published to the Visual Studio Marketplace by `.github/workflows/release.yml` when a `v*` tag is pushed:
+Releases are published to the Visual Studio Marketplace by `.github/workflows/release.yml` when a `v*` tag is pushed. It authenticates with OpenID Connect (trusted publishing), so there is no token to store:
 
 1. Create a publisher at <https://marketplace.visualstudio.com/manage> and set it: `npm pkg set publisher=<id>`.
-2. Create a Marketplace token and add it as the GitHub secret `VSCE_PAT` (see the publishing guide: <https://code.visualstudio.com/api/working-with-extensions/publishing-extension>).
+2. In the publisher settings, add this GitHub repository and workflow as a trusted publisher (see <https://code.visualstudio.com/api/working-with-extensions/publishing-extension>).
 3. Release: `npm version patch && git push --follow-tags`.
-
-Optionally add `OVSX_PAT` to also publish to Open VSX (VSCodium, Cursor, etc.).

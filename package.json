@@ -2,7 +2,7 @@
   "name": "canvas",
   "displayName": "Canvas",
   "description": "An infinite canvas for connecting your thoughts and ideas — a JSON Canvas 1.0 editor for VS Code.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "odlot-marco-lutz",
   "engines": {
     "vscode": "^1.146.0"
