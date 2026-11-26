@@ -19,12 +19,14 @@
 		const canvasFile = params.get('file') || 'sample.canvas';
 		window.__edits = [];
 		window.__sent = [];
+		window.__posted = [];
 		let state;
 		const send = (m) => { window.__sent.push(m); window.postMessage(m, '*'); };
 		window.acquireVsCodeApi = () => ({
 			getState: () => state,
 			setState: (s) => { state = s; },
 			async postMessage(m) {
+				window.__posted.push(m);
 				switch (m.type) {
 					case 'ready': {
 						const text = await (await fetch(FIXTURES + canvasFile)).text();

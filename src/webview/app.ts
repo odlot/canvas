@@ -137,10 +137,10 @@ export class CanvasApp {
 					<div class="layer labels"></div>
 				</div>
 				<div class="box" hidden></div>
-				<div class="empty-hint" hidden>Double-click to add a note · drop files with <kbd>Shift</kbd> held</div>
+				<div class="empty-hint" hidden>Add a note from the toolbar · drop files with <kbd>Shift</kbd> held</div>
 			</div>
 			<div class="toolbar" role="toolbar">
-				<button data-action="note" title="Add note (double-click canvas)">${icons.note}<span>Note</span></button>
+				<button data-action="note" title="Add note">${icons.note}<span>Note</span></button>
 				<button data-action="file" title="Add file from disk">${icons.file}<span>File</span></button>
 				<button data-action="link" title="Add web link">${icons.link}<span>Link</span></button>
 				<button data-action="group" title="Add group (around selection)">${icons.group}<span>Group</span></button>
@@ -991,11 +991,12 @@ export class CanvasApp {
 		if (this.readonly) {
 			return;
 		}
-		const t = e.target as Element;
+		// Pointer capture on the viewport (see startGesture) retargets dblclick to
+		// the viewport itself, so resolve the element actually under the cursor.
+		const t = document.elementFromPoint(e.clientX, e.clientY) ?? (e.target as Element);
 		if (t.closest('textarea, input, button, .pdf-nav, .handle, .resize')) {
 			return;
 		}
-		const world = this.worldPoint(e);
 		const edgeId = t.closest<SVGElement>('.edge')?.dataset.id ?? t.closest<HTMLElement>('.edge-label')?.dataset.edge;
 		if (edgeId) {
 			this.editEdgeLabel(edgeId);
@@ -1017,12 +1018,10 @@ export class CanvasApp {
 				case 'group':
 					if (t.closest('.node-label')) {
 						this.editGroupLabel(node.id);
-						return;
 					}
-					break; // double-click inside a group body creates a note there
+					return;
 			}
 		}
-		this.createTextNode(world, true);
 	}
 
 	private onKeyDown(e: KeyboardEvent): void {

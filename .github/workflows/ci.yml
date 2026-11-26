@@ -1,0 +1,24 @@
+# Runs every test suite on pull requests, so only passing code reaches main.
+# All steps live in validation.sh, so CI and local runs stay identical.
+name: CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: ./validation.sh
