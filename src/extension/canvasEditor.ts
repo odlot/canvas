@@ -70,7 +70,7 @@ class CanvasSession {
 					this.watchers.clear();
 					this.post({ type: 'resetFiles' });
 				}
-				if (e.affectsConfiguration('canvas.newNoteFormat', document.uri)) {
+				if (e.affectsConfiguration('canvas.vault', document.uri) || e.affectsConfiguration('canvas.newNoteFormat', document.uri)) {
 					this.post({ type: 'config', config: canvasConfig(document.uri) });
 				}
 			}),
@@ -172,6 +172,9 @@ class CanvasSession {
 				}
 				break;
 			}
+			case 'selectVault':
+				await vscode.commands.executeCommand('canvas.selectVault', this.document.uri);
+				break;
 			case 'openAsText':
 				await vscode.commands.executeCommand('vscode.openWith', this.document.uri, 'default');
 				break;

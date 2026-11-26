@@ -123,6 +123,7 @@ export class CanvasApp {
 	private readonly colorButton: HTMLButtonElement;
 	private readonly deleteButton: HTMLButtonElement;
 	private readonly toFileButton: HTMLButtonElement;
+	private readonly vaultButton: HTMLButtonElement;
 	private readonly popover: HTMLElement;
 	private readonly banner: HTMLElement;
 	private readonly errorPanel: HTMLElement;
@@ -146,6 +147,8 @@ export class CanvasApp {
 				<div class="empty-hint" hidden>Add a note from the toolbar · drop files with <kbd>Shift</kbd> held</div>
 			</div>
 			<div class="toolbar" role="toolbar">
+				<button data-action="vault" class="vault-label">${icons.folder}<span></span></button>
+				<span class="sep"></span>
 				<button data-action="note" title="Add note">${icons.note}<span>Note</span></button>
 				<button data-action="file" title="Add file from disk">${icons.file}<span>File</span></button>
 				<button data-action="link" title="Add web link">${icons.link}<span>Link</span></button>
@@ -176,6 +179,8 @@ export class CanvasApp {
 		this.colorButton = q('[data-action="color"]');
 		this.deleteButton = q('[data-action="delete"]');
 		this.toFileButton = q('[data-action="to-file"]');
+		this.vaultButton = q('[data-action="vault"]');
+		this.updateVault();
 		this.popover = q('.popover');
 		this.banner = q('.banner');
 		this.errorPanel = q('.error-panel');
@@ -210,6 +215,7 @@ export class CanvasApp {
 				break;
 			case 'config':
 				this.config = msg.config;
+				this.updateVault();
 				break;
 			case 'resetFiles':
 				this.files.clear();
@@ -637,6 +643,15 @@ export class CanvasApp {
 			}
 		}
 		this.pendingEdge.setAttribute('d', pending);
+	}
+
+	/** Show the current vault in the toolbar; clicking it lets the user pick another one. */
+	private updateVault(): void {
+		const vault = this.config.vault;
+		this.vaultButton.querySelector('span')!.textContent = vault?.name ?? 'No vault';
+		this.vaultButton.title = vault
+			? `Vault: ${vault.path}\nFile paths are relative to it and note files are created in it. Click to change.`
+			: 'No vault: save the canvas or open a folder, or click to choose a vault folder.';
 	}
 
 	private updateToolbar(): void {
@@ -1219,6 +1234,9 @@ export class CanvasApp {
 				break;
 			case 'to-file':
 				this.saveNotesAsFiles([...this.selNodes]);
+				break;
+			case 'vault':
+				this.host.postMessage({ type: 'selectVault' });
 				break;
 			case 'color':
 				this.openColorPopover(button);

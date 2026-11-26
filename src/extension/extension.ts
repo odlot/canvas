@@ -18,7 +18,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			await vscode.workspace.fs.writeFile(target, new TextEncoder().encode('{\n\t"nodes": [],\n\t"edges": []\n}\n'));
 			await vscode.commands.executeCommand('vscode.openWith', target, CanvasEditorProvider.viewType);
 		}),
-		vscode.commands.registerCommand('canvas.selectVault', selectVault),
+		vscode.commands.registerCommand('canvas.selectVault', (resource?: unknown) => selectVault(resource instanceof vscode.Uri ? resource : undefined)),
 	);
 }
 
