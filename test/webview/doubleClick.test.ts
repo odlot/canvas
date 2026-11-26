@@ -75,6 +75,13 @@ describe('double-click', () => {
 		await expect.poll(posted).toContainEqual({ type: 'openFile', path: 'notes.md', subpath: undefined });
 	});
 
+	it('opens a PDF file node (the host shows it in the PDF viewer)', async () => {
+		await page.waitForSelector('.node[data-id="pdf"] .pdf-page canvas');
+		const p = await pointIn('pdf');
+		await page.mouse.dblclick(p.x, p.y);
+		await expect.poll(posted).toContainEqual({ type: 'openFile', path: 'paper.pdf', subpath: undefined });
+	});
+
 	it('opens the URL of a link node', async () => {
 		const p = await pointIn('link');
 		await page.mouse.dblclick(p.x, p.y);

@@ -18,6 +18,19 @@ Canvas is a visual editor for `.canvas` files in the open [JSON Canvas 1.0](http
 
 Files on the canvas update live when they change on disk.
 
+### PDF viewer
+
+Double-clicking a PDF node opens the file beside the canvas in a built-in PDF viewer (pdf.js), made for large documents such as the Arm Architecture Reference Manual:
+
+- **Fast on huge files.** The file is streamed to the viewer in byte ranges on demand, and only pages near the viewport are rendered. On a 60 MB, 6,666-page Arm manual, the first page appears in about half a second, and jumping anywhere takes about 0.1 s.
+- **Outline** sidebar (<kbd>☰</kbd>), expanded on demand.
+- **Links** inside the document, with **Back/Forward** (<kbd>Alt</kbd>+<kbd>←</kbd>/<kbd>→</kbd>).
+- **Find** (<kbd>Ctrl/⌘</kbd>+<kbd>F</kbd>, <kbd>Enter</kbd> / <kbd>Shift</kbd>+<kbd>Enter</kbd>), selectable text.
+- **Page jump** (type a number), <kbd>Home</kbd>/<kbd>End</kbd>, <kbd>n</kbd>/<kbd>p</kbd>.
+- **Zoom**: toolbar, <kbd>Ctrl/⌘</kbd>+<kbd>+</kbd>/<kbd>-</kbd>/<kbd>0</kbd>, <kbd>Ctrl/⌘</kbd>+scroll or pinch; fit page or width.
+
+The viewer remembers your page and zoom, and it reloads in place when the file changes. To use it for every PDF, run *Reopen Editor With… → Configure default editor for '\*.pdf'* → *PDF Viewer (Canvas)*.
+
 ### Interactions
 
 | Action | How |
@@ -30,7 +43,7 @@ Files on the canvas update live when they change on disk.
 | **Connect** | Drag from a side handle onto another node. Drop on empty space to create a connected note |
 | New note | The toolbar |
 | Edit | Double-click a note (<kbd>Esc</kbd> or <kbd>⌘/Ctrl</kbd>+<kbd>Enter</kbd> to finish); double-click a group title or edge to label it |
-| Open | Double-click a file node (opens beside) or a link node (opens the browser) |
+| Open | Double-click a file node (opens beside; PDFs open in the [PDF viewer](#pdf-viewer)) or a link node (opens the browser) |
 | Add files | Toolbar → File, or drag from the Explorer **while holding <kbd>Shift</kbd>** |
 | Paste | URLs become link nodes, text becomes notes; copy/paste and <kbd>⌘/Ctrl</kbd>+<kbd>D</kbd> duplicate nodes |
 | Color | Toolbar color button: the 6 spec presets or a custom hex |
@@ -78,12 +91,16 @@ src/shared/      spec model, shared by host + webview, fully unit-tested
   geometry.ts      anchors, bezier edges, viewport math, hit testing
   fileKinds.ts     file → renderer mapping, markdown subpath slicing
   protocol.ts      host ↔ webview messages
+  pdfProtocol.ts   host ↔ PDF viewer messages (byte-range streaming)
 src/extension/   CustomTextEditorProvider (document sync, file resolution, watchers)
+  pdfEditor.ts     read-only PDF viewer editor; serves byte ranges from disk
 src/webview/     the canvas UI (vanilla TS + DOM/SVG, marked, highlight.js, pdf.js)
+  pdfViewer/       the PDF viewer (pdf.js PDFViewer + toolbar, outline, history)
 test/unit/       Vitest spec + model tests
 test/integration/ VS Code extension tests
 test/fixtures/   sample canvas and files
 dev/harness.html browser harness that mocks the VS Code API
+dev/pdf-harness.html  the same for the PDF viewer (?src=<pdf url>)
 ```
 
 ## Packaging & publishing
