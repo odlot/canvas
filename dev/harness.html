@@ -21,6 +21,7 @@
 		window.__sent = [];
 		window.__posted = [];
 		let state;
+		let config;
 		const send = (m) => { window.__sent.push(m); window.postMessage(m, '*'); };
 		window.acquireVsCodeApi = () => ({
 			getState: () => state,
@@ -29,7 +30,8 @@
 				window.__posted.push(m);
 				switch (m.type) {
 					case 'ready': {
-						send({ type: 'config', config: { newNoteFormat: params.get('newNoteFormat') || 'text' } });
+						config = { newNoteFormat: params.get('newNoteFormat') || 'text', vault: { name: 'fixtures', path: '/workspace/test/fixtures' } };
+						send({ type: 'config', config });
 						const text = await (await fetch(FIXTURES + canvasFile)).text();
 						const { parse } = window.__harness;
 						send({ type: 'load', ...parse(text), text });
@@ -51,6 +53,11 @@
 					case 'createNoteFiles':
 						// No real vault in the browser: pretend the notes were written as notes.md.
 						send({ type: 'noteFilesCreated', files: m.notes.map((n) => ({ nodeId: n.nodeId, path: 'notes.md' })) });
+						break;
+					case 'selectVault':
+						// Pretend the user picked another folder in the dialog.
+						config = { ...config, vault: { name: 'Picked Vault', path: '/elsewhere/Picked Vault' } };
+						send({ type: 'config', config });
 						break;
 					case 'pickFiles':
 						send({ type: 'insertFiles', paths: ['diagram.svg'], at: m.at });

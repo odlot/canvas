@@ -19,6 +19,8 @@ export type NewNoteFormat = 'text' | 'markdownFile';
 
 export interface CanvasConfig {
 	newNoteFormat: NewNoteFormat;
+	/** The folder canvas paths resolve against; absent for an unsaved canvas outside any workspace. */
+	vault?: { name: string; path: string };
 }
 
 export type HostToWebview =
@@ -40,5 +42,7 @@ export type WebviewToHost =
 	| { type: 'pickFiles'; at: { x: number; y: number } }
 	| { type: 'resolveDrop'; uris: string[]; at: { x: number; y: number } }
 	| { type: 'openAsText' }
+	/** Let the user pick a different vault folder. */
+	| { type: 'selectVault' }
 	/** Write each note's text to a new Markdown file in the vault. */
 	| { type: 'createNoteFiles'; notes: { nodeId: string; text: string }[] };

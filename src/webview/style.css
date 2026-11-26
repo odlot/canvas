@@ -650,6 +650,13 @@ kbd {
 	font-variant-numeric: tabular-nums;
 }
 
+.toolbar .vault-label span {
+	max-width: 160px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 .toolbar .sep {
 	width: 1px;
 	height: 18px;

@@ -35,12 +35,22 @@ export function notesFolder(resource: vscode.Uri | undefined): string {
 
 export function canvasConfig(resource: vscode.Uri | undefined): CanvasConfig {
 	const format = vscode.workspace.getConfiguration('canvas', resource).get<NewNoteFormat>('newNoteFormat', 'text');
-	return { newNoteFormat: format === 'markdownFile' ? 'markdownFile' : 'text' };
+	const vault = vaultUri(resource);
+	return {
+		newNoteFormat: format === 'markdownFile' ? 'markdownFile' : 'text',
+		vault: vault && {
+			name: vault.path.replace(/\/+$/, '').split('/').pop() || vault.path,
+			path: vault.scheme === 'file' ? vault.fsPath : vault.toString(),
+		},
+	};
 }
 
-/** `canvas.selectVault`: pick a folder and store it in the `canvas.vault` setting. */
-export async function selectVault(): Promise<void> {
-	const active = vscode.window.activeTextEditor?.document.uri;
+/**
+ * `canvas.selectVault`: pick a folder and store it in the `canvas.vault` setting.
+ * `resource` is the canvas asking (from its toolbar), used to preselect its current vault.
+ */
+export async function selectVault(resource?: vscode.Uri): Promise<void> {
+	const active = resource ?? vscode.window.activeTextEditor?.document.uri;
 	const picked = await vscode.window.showOpenDialog({
 		canSelectFiles: false,
 		canSelectFolders: true,

@@ -13,5 +13,6 @@ export const icons = {
 	plus: svg('<path d="M3.5 8h9M8 3.5v9"/>'),
 	fit: svg('<path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/>'),
 	open: svg('<path d="M9.5 2.5h4v4M13.5 2.5 7.5 8.5M12 9.5v4H2.5V4h4"/>'),
+	folder: svg('<path d="M1.8 4.2c0-.6.5-1.1 1.1-1.1h3.3l1.5 1.6h5.4c.6 0 1.1.5 1.1 1.1v6.3c0 .6-.5 1.1-1.1 1.1H2.9c-.6 0-1.1-.5-1.1-1.1z"/>'),
 	toFile: svg('<path d="M4 1.8h5l3.2 3.2v9.2H4z"/><path d="M9 1.8V5h3.2"/><path d="M8 7v4.5M6.2 9.8 8 11.6l1.8-1.8"/>'),
 };
