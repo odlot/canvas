@@ -23,12 +23,6 @@ export interface CanvasConfig {
 	vault?: { name: string; path: string };
 }
 
-/** A file dropped from the OS, which the webview can only read, not locate. */
-export interface DroppedFile {
-	name: string;
-	data: Uint8Array;
-}
-
 export type HostToWebview =
 	| { type: 'load'; canvas: Canvas | undefined; issues: ValidationIssue[]; text: string }
 	| { type: 'config'; config: CanvasConfig }
@@ -46,9 +40,6 @@ export type WebviewToHost =
 	| { type: 'openFile'; path: string; subpath?: string }
 	| { type: 'openLink'; url: string }
 	| { type: 'pickFiles'; at: { x: number; y: number } }
-	| { type: 'resolveDrop'; uris: string[]; at: { x: number; y: number } }
-	/** Files dropped from outside VS Code: the host copies them into the workspace. */
-	| { type: 'importFiles'; files: DroppedFile[]; at: { x: number; y: number } }
 	| { type: 'openAsText' }
 	/** Let the user pick a different vault folder. */
 	| { type: 'selectVault' }

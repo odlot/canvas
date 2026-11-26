@@ -34,8 +34,7 @@ import {
 	updateNode,
 	withGroupChildren,
 } from '../shared/operations';
-import { MAX_IMPORT_BYTES } from '../shared/fileNames';
-import type { CanvasConfig, DroppedFile, HostToWebview, ResolvedFile, WebviewToHost } from '../shared/protocol';
+import type { CanvasConfig, HostToWebview, ResolvedFile, WebviewToHost } from '../shared/protocol';
 import { SIDES, type Canvas, type CanvasColor, type CanvasNode, type FileNode, type Side } from '../shared/types';
 import { parseCanvas, type ValidationIssue } from '../shared/validate';
 import { icons } from './icons';
@@ -129,8 +128,6 @@ export class CanvasApp {
 	private readonly banner: HTMLElement;
 	private readonly errorPanel: HTMLElement;
 	private readonly emptyHint: HTMLElement;
-	private readonly dropHint: HTMLElement;
-	private dropHintTimer: ReturnType<typeof setTimeout> | undefined;
 
 	constructor(
 		mount: HTMLElement,
@@ -147,7 +144,7 @@ export class CanvasApp {
 					<div class="layer labels"></div>
 				</div>
 				<div class="box" hidden></div>
-				<div class="empty-hint" hidden>Add a note from the toolbar · <kbd>Shift</kbd>-drop files from Finder · right-click files in the Explorer → Add to Canvas</div>
+				<div class="empty-hint" hidden>Add a note from the toolbar · right-click files in the Explorer → Add to Canvas</div>
 			</div>
 			<div class="toolbar" role="toolbar">
 				<button data-action="vault" class="vault-label">${icons.folder}<span></span></button>
@@ -168,7 +165,6 @@ export class CanvasApp {
 			</div>
 			<div class="popover" hidden></div>
 			<div class="banner" hidden></div>
-			<div class="drop-hint" hidden>Hold <kbd>Shift</kbd> while dropping to add files to the canvas</div>
 			<div class="error-panel" hidden></div>
 		`;
 		const q = <T extends Element>(sel: string): T => this.root.querySelector(sel) as T;
@@ -189,7 +185,6 @@ export class CanvasApp {
 		this.banner = q('.banner');
 		this.errorPanel = q('.error-panel');
 		this.emptyHint = q('.empty-hint');
-		this.dropHint = q('.drop-hint');
 		this.edgeSvg.append(this.pendingEdge);
 
 		this.bindEvents();
@@ -727,19 +722,6 @@ export class CanvasApp {
 		vp.addEventListener('pointercancel', () => this.cancelGesture());
 		vp.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
 		vp.addEventListener('dblclick', (e) => this.onDoubleClick(e));
-		vp.addEventListener('dragover', (e) => {
-			e.preventDefault();
-			if (e.dataTransfer) {
-				e.dataTransfer.dropEffect = 'copy';
-			}
-			// Without Shift, VS Code takes the drag away from webviews (to open
-			// the file in an editor), so this is our only chance to say how to
-			// drop into the canvas instead.
-			if (!e.shiftKey && !this.readonly && e.dataTransfer?.types.includes('Files')) {
-				this.showDropHint();
-			}
-		});
-		vp.addEventListener('drop', (e) => this.onDrop(e));
 		window.addEventListener('keydown', (e) => this.onKeyDown(e));
 		window.addEventListener('keyup', (e) => {
 			if (e.code === 'Space') {
@@ -1137,65 +1119,6 @@ export class CanvasApp {
 		}
 	}
 
-	private onDrop(e: DragEvent): void {
-		e.preventDefault();
-		if (this.readonly || !e.dataTransfer) {
-			return;
-		}
-		const at = this.worldPoint(e);
-		const list = e.dataTransfer.getData('application/vnd.code.uri-list') || e.dataTransfer.getData('text/uri-list');
-		const uris = list
-			.split(/\r?\n/)
-			.map((s) => s.trim())
-			.filter((s) => s && !s.startsWith('#'));
-		if (uris.length) {
-			const files = uris.filter((u) => !/^https?:/i.test(u));
-			const links = uris.filter((u) => /^https?:/i.test(u));
-			if (files.length) {
-				this.host.postMessage({ type: 'resolveDrop', uris: files, at });
-			}
-			links.forEach((url, i) => this.createLinkNode(url, { x: at.x + i * 30, y: at.y + i * 30 }));
-			return;
-		}
-		// Files from the OS come without a path; the host copies their contents into the workspace.
-		if (e.dataTransfer.files.length) {
-			void this.importDroppedFiles([...e.dataTransfer.files], at);
-			return;
-		}
-		const text = e.dataTransfer.getData('text/plain');
-		if (text) {
-			this.insertText(text, at);
-		}
-	}
-
-	private async importDroppedFiles(list: File[], at: Point): Promise<void> {
-		const files: DroppedFile[] = [];
-		const skipped: string[] = [];
-		for (const file of list) {
-			if (file.size > MAX_IMPORT_BYTES) {
-				skipped.push(`${file.name} (larger than ${MAX_IMPORT_BYTES / 1024 / 1024} MB)`);
-				continue;
-			}
-			try {
-				files.push({ name: file.name, data: new Uint8Array(await file.arrayBuffer()) });
-			} catch {
-				skipped.push(`${file.name} (folders and unreadable files can't be added)`);
-			}
-		}
-		if (skipped.length) {
-			this.showBanner(`Not added: ${skipped.join(', ')}`);
-		}
-		if (files.length) {
-			this.host.postMessage({ type: 'importFiles', files, at });
-		}
-	}
-
-	private showDropHint(): void {
-		this.dropHint.hidden = false;
-		clearTimeout(this.dropHintTimer);
-		this.dropHintTimer = setTimeout(() => (this.dropHint.hidden = true), 3000);
-	}
-
 	private onCopy(e: ClipboardEvent): boolean {
 		const t = e.target as HTMLElement;
 		if (t.closest?.('textarea, input') || !this.selNodes.size || window.getSelection()?.toString()) {
@@ -1222,7 +1145,7 @@ export class CanvasApp {
 		this.insertText(text, this.viewCenter());
 	}
 
-	/** Insert pasted/dropped text: a canvas fragment, a URL, or a plain note. */
+	/** Insert pasted text: a canvas fragment, a URL, or a plain note. */
 	private insertText(text: string, at: Point): void {
 		const trimmed = text.trim();
 		if (trimmed.startsWith('{')) {

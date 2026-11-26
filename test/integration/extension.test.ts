@@ -70,22 +70,22 @@ suite('Canvas extension', () => {
 		assert.strictEqual((mdTab.input as vscode.TabInputText).uri.toString(), fixture('notes.md').toString());
 	});
 
-	test('Add to Canvas inserts Explorer files into the open canvas', async () => {
+	test('Add to Canvas inserts Explorer files into the open canvas', async function () {
+		// The first webview of a fresh VS Code can take well over the default timeout to load.
+		this.timeout(60000);
 		const dir = mkdtempSync(join(tmpdir(), 'canvas-add-'));
 		const uri = vscode.Uri.file(join(dir, 'board.canvas'));
 		writeFileSync(uri.fsPath, '{\n\t"nodes": [],\n\t"edges": []\n}\n');
 		try {
 			await vscode.commands.executeCommand('vscode.openWith', uri, 'canvas.editor');
 			const doc = await vscode.workspace.openTextDocument(uri);
-			// The webview must be up to receive the insert; `ready` triggers the first load.
-			await new Promise((r) => setTimeout(r, 1500));
 
 			await vscode.commands.executeCommand('canvas.addToCanvas', fixture('notes.md'), [fixture('notes.md'), fixture('diagram.svg')]);
 
 			const nodes = await waitFor(() => {
 				const n = (JSON.parse(doc.getText()) as { nodes: { type: string; file?: string }[] }).nodes;
 				return n.length ? n : undefined;
-			});
+			}, 50000);
 			assert.deepStrictEqual(nodes.map((n) => [n.type, n.file]), [
 				['file', 'notes.md'],
 				['file', 'diagram.svg'],

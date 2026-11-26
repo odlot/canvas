@@ -6,7 +6,7 @@ import { parseCanvas, serializeCanvas } from '../shared/validate';
 import { canvasConfig, notesFolder, vaultUri } from './vault';
 import { makeNonce } from './nonce';
 import { openFileBeside } from './openFile';
-import { droppedFiles, importFiles } from './drops';
+import { onlyFiles } from './files';
 
 /** Files larger than this are shown truncated in text/code nodes. */
 const MAX_TEXT_BYTES = 256 * 1024;
@@ -72,6 +72,9 @@ class CanvasSession {
 	private readonly watchers = new Map<string, vscode.Disposable>();
 	/** Text we last wrote, so we don't echo our own edits back to the webview. */
 	private lastWrittenText: string | undefined;
+	/** Resolves once the webview has loaded and listens for messages. */
+	private readonly ready: Promise<void>;
+	private markReady!: () => void;
 	private readonly webview: vscode.Webview;
 
 	constructor(
@@ -80,6 +83,7 @@ class CanvasSession {
 		private readonly panel: vscode.WebviewPanel,
 	) {
 		this.webview = panel.webview;
+		this.ready = new Promise((r) => (this.markReady = r));
 		this.webview.options = { enableScripts: true, localResourceRoots: this.resourceRoots() };
 		this.webview.html = this.html();
 
@@ -143,12 +147,11 @@ class CanvasSession {
 
 	/** Insert files (e.g. picked in the Explorer) at the centre of the view and bring the canvas to the front. */
 	async addFiles(uris: readonly vscode.Uri[]): Promise<void> {
-		const files = await droppedFiles(
-			uris.map((u) => u.toString()),
-			uris.map((u) => u.scheme),
-		);
+		const files = await onlyFiles(uris);
 		if (files.length) {
 			this.panel.reveal(undefined, false);
+			// A canvas that was just opened may not be listening yet.
+			await this.ready;
 			this.post({ type: 'insertFiles', paths: files.map((u) => this.toCanvasPath(u)) });
 		}
 	}
@@ -168,6 +171,7 @@ class CanvasSession {
 			case 'ready':
 				this.post({ type: 'config', config: canvasConfig(this.document.uri) });
 				this.sendLoad();
+				this.markReady();
 				break;
 			case 'createNoteFiles':
 				await this.createNoteFiles(m.notes);
@@ -204,27 +208,6 @@ class CanvasSession {
 				}
 				break;
 			}
-			case 'resolveDrop': {
-				const uris = await droppedFiles(m.uris, ['file', 'vscode-remote', this.document.uri.scheme]);
-				if (uris.length) {
-					this.post({ type: 'insertFiles', paths: uris.map((u) => this.toCanvasPath(u)), at: m.at });
-				}
-				break;
-			}
-			case 'importFiles': {
-				const dir = this.importDir();
-				if (!dir) {
-					void vscode.window.showWarningMessage('Canvas: save the canvas or open a folder before dropping files from outside VS Code.');
-					break;
-				}
-				try {
-					const uris = await importFiles(dir, m.files);
-					this.post({ type: 'insertFiles', paths: uris.map((u) => this.toCanvasPath(u)), at: m.at });
-				} catch (err) {
-					void vscode.window.showErrorMessage(`Canvas: could not copy the dropped files: ${err instanceof Error ? err.message : String(err)}`);
-				}
-				break;
-			}
 			case 'selectVault':
 				await vscode.commands.executeCommand('canvas.selectVault', this.document.uri);
 				break;
@@ -250,11 +233,6 @@ class CanvasSession {
 	/** Folder that canvas-relative file paths are resolved against: the vault (see `vaultUri`). */
 	private baseDir(): vscode.Uri | undefined {
 		return vaultUri(this.document.uri);
-	}
-
-	/** Folder that files dropped from outside VS Code are copied into: next to the canvas, else the workspace root. */
-	private importDir(): vscode.Uri | undefined {
-		return this.document.uri.scheme === 'untitled' ? this.baseDir() : vscode.Uri.joinPath(this.document.uri, '..');
 	}
 
 	/**
@@ -306,7 +284,7 @@ class CanvasSession {
 		return { path, exists: true, uri: this.webview.asWebviewUri(uri).toString() };
 	}
 
-	/** Path to store in the canvas for a picked/dropped file: workspace-relative with forward slashes. */
+	/** Path to store in the canvas for a picked file: workspace-relative with forward slashes. */
 	private toCanvasPath(uri: vscode.Uri): string {
 		const base = this.baseDir();
 		if (base && uri.path.startsWith(base.path.replace(/\/$/, '') + '/')) {
