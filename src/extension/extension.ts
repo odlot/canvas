@@ -17,6 +17,11 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showWarningMessage('Canvas: open a canvas first, then add files to it.');
 			}
 		}),
+		vscode.commands.registerCommand('canvas.addFileFromWorkspace', async () => {
+			if (!(await canvases.pickAndAddFile())) {
+				void vscode.window.showWarningMessage('Canvas: open a canvas first, then add files to it.');
+			}
+		}),
 		vscode.commands.registerCommand('canvas.new', async () => {
 			const folder = vaultUri(vscode.window.activeTextEditor?.document.uri);
 			const target = await vscode.window.showSaveDialog({

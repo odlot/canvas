@@ -6,7 +6,7 @@ import { parseCanvas, serializeCanvas } from '../shared/validate';
 import { canvasConfig, notesFolder, vaultUri } from './vault';
 import { makeNonce } from './nonce';
 import { openFileBeside } from './openFile';
-import { onlyFiles } from './files';
+import { onlyFiles, pickWorkspaceFile } from './files';
 
 /** Files larger than this are shown truncated in text/code nodes. */
 const MAX_TEXT_BYTES = 256 * 1024;
@@ -56,6 +56,22 @@ export class CanvasEditorProvider implements vscode.CustomTextEditorProvider {
 			return false;
 		}
 		await session.addFiles(uris);
+		return true;
+	}
+
+	/**
+	 * Fuzzy-find a workspace file and add it to the canvas the user is working
+	 * in. Returns false when no canvas is open.
+	 */
+	async pickAndAddFile(): Promise<boolean> {
+		const session = this.sessions.at(-1);
+		if (!session) {
+			return false;
+		}
+		const uri = await pickWorkspaceFile(session.uri);
+		if (uri) {
+			await session.addFiles([uri]);
+		}
 		return true;
 	}
 
@@ -143,6 +159,10 @@ class CanvasSession {
 			w.dispose();
 		}
 		this.watchers.clear();
+	}
+
+	get uri(): vscode.Uri {
+		return this.document.uri;
 	}
 
 	/** Insert files (e.g. picked in the Explorer) at the centre of the view and bring the canvas to the front. */

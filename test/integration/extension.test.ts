@@ -96,6 +96,30 @@ suite('Canvas extension', () => {
 		}
 	});
 
+	test('Add File from Workspace adds the file picked in the quick pick', async function () {
+		this.timeout(60000);
+		const dir = mkdtempSync(join(tmpdir(), 'canvas-pick-'));
+		const uri = vscode.Uri.file(join(dir, 'board.canvas'));
+		writeFileSync(uri.fsPath, '{\n\t"nodes": [],\n\t"edges": []\n}\n');
+		try {
+			await vscode.commands.executeCommand('vscode.openWith', uri, 'canvas.editor');
+			const doc = await vscode.workspace.openTextDocument(uri);
+
+			const picked = vscode.commands.executeCommand('canvas.addFileFromWorkspace');
+			// Accept the top entry (sorted by path) once the file list has loaded.
+			const nodes = await waitFor(() => {
+				void vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem');
+				const n = (JSON.parse(doc.getText()) as { nodes: { type: string; file?: string }[] }).nodes;
+				return n.length ? n : undefined;
+			}, 50000);
+			await picked;
+			assert.deepStrictEqual(nodes.map((n) => [n.type, n.file]), [['file', 'diagram.svg']]);
+			await vscode.commands.executeCommand('workbench.action.files.revert');
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
 	test('external edits to the document keep it valid and undoable', async () => {
 		const uri = fixture('sample.canvas');
 		await vscode.commands.executeCommand('vscode.openWith', uri, 'canvas.editor');

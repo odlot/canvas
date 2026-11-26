@@ -73,6 +73,8 @@ type Gesture =
 	| { kind: 'box'; start: Point; current: Point; base: Set<string> };
 
 const DRAG_THRESHOLD = 3;
+/** Shortcut of the "Canvas: Add File from Workspace…" command (see package.json). */
+const ADD_FILE_KEYS = /Mac/.test(navigator.userAgent) ? '<kbd>⌥⌘P</kbd>' : '<kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd>';
 const ARROW = 12;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -144,7 +146,7 @@ export class CanvasApp {
 					<div class="layer labels"></div>
 				</div>
 				<div class="box" hidden></div>
-				<div class="empty-hint" hidden>Add a note from the toolbar · right-click files in the Explorer → Add to Canvas</div>
+				<div class="empty-hint" hidden>Add a note from the toolbar · add a file with ${ADD_FILE_KEYS}</div>
 			</div>
 			<div class="toolbar" role="toolbar">
 				<button data-action="vault" class="vault-label">${icons.folder}<span></span></button>

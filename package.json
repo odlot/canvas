@@ -61,6 +61,11 @@
         "command": "canvas.addToCanvas",
         "title": "Add to Canvas",
         "category": "Canvas"
+      },
+      {
+        "command": "canvas.addFileFromWorkspace",
+        "title": "Add File from Workspace…",
+        "category": "Canvas"
       }
     ],
     "configuration": {
@@ -110,9 +115,21 @@
         {
           "command": "canvas.addToCanvas",
           "when": "false"
+        },
+        {
+          "command": "canvas.addFileFromWorkspace",
+          "when": "activeCustomEditorId == 'canvas.editor'"
         }
       ]
-    }
+    },
+    "keybindings": [
+      {
+        "command": "canvas.addFileFromWorkspace",
+        "key": "ctrl+alt+p",
+        "mac": "cmd+alt+p",
+        "when": "activeCustomEditorId == 'canvas.editor' && !listFocus && !inQuickOpen"
+      }
+    ]
   },
   "scripts": {
     "build": "node esbuild.mjs",
