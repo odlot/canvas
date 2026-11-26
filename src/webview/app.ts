@@ -103,6 +103,7 @@ export class CanvasApp {
 	private loaded = false;
 	private readonly = true;
 	private rafPending = false;
+	private zoomSettleTimer: ReturnType<typeof setTimeout> | undefined;
 
 	// DOM
 	private readonly root: HTMLElement;
@@ -291,7 +292,8 @@ export class CanvasApp {
 
 	render(): void {
 		const { x, y, zoom } = this.view;
-		this.world.style.transform = `translate(${x}px, ${y}px) scale(${zoom})`;
+		// Whole-pixel offsets keep text from landing on subpixel positions.
+		this.world.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) scale(${zoom})`;
 		this.root.style.setProperty('--zoom', String(zoom));
 		this.root.style.setProperty('--inv-zoom', String(1 / zoom));
 		let grid = 24 * zoom;
@@ -646,7 +648,20 @@ export class CanvasApp {
 	private zoomBy(factor: number, anchor?: Point): void {
 		const r = this.viewportEl.getBoundingClientRect();
 		this.view = zoomAt(this.view, anchor ?? { x: r.width / 2, y: r.height / 2 }, factor);
+		this.markZooming();
 		this.scheduleRender();
+	}
+
+	/**
+	 * Promote the world to a compositor layer only while a zoom is in progress.
+	 * A permanently promoted layer is rasterized once and then bitmap-scaled,
+	 * which makes notes blurry; dropping the hint once zooming settles makes
+	 * the browser re-rasterize at the final scale.
+	 */
+	private markZooming(): void {
+		this.world.classList.add('zooming');
+		clearTimeout(this.zoomSettleTimer);
+		this.zoomSettleTimer = setTimeout(() => this.world.classList.remove('zooming'), 150);
 	}
 
 	// ======================================================================
