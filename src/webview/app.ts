@@ -137,10 +137,10 @@ export class CanvasApp {
 					<div class="layer labels"></div>
 				</div>
 				<div class="box" hidden></div>
-				<div class="empty-hint" hidden>Double-click to add a note · drop files with <kbd>Shift</kbd> held</div>
+				<div class="empty-hint" hidden>Add a note from the toolbar · drop files with <kbd>Shift</kbd> held</div>
 			</div>
 			<div class="toolbar" role="toolbar">
-				<button data-action="note" title="Add note (double-click canvas)">${icons.note}<span>Note</span></button>
+				<button data-action="note" title="Add note">${icons.note}<span>Note</span></button>
 				<button data-action="file" title="Add file from disk">${icons.file}<span>File</span></button>
 				<button data-action="link" title="Add web link">${icons.link}<span>Link</span></button>
 				<button data-action="group" title="Add group (around selection)">${icons.group}<span>Group</span></button>

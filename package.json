@@ -60,6 +60,7 @@
     "typecheck": "tsc -p .",
     "lint": "eslint src test",
     "test:unit": "vitest run",
+    "test:webview": "npm run build && vitest run --config vitest.webview.config.ts",
     "compile-tests": "esbuild test/integration/*.ts --outdir=out/test/integration --platform=node --format=cjs --external:vscode --bundle",
     "test:integration": "npm run build && npm run compile-tests && vscode-test",
     "test": "npm run typecheck && npm run lint && npm run test:unit",
@@ -75,6 +76,7 @@
     "@vscode/vsce": "^4.1.1",
     "esbuild": "^0.28.2",
     "eslint": "^10.5.0",
+    "playwright": "^1.52.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.74.0",
     "vitest": "^3.2.7"
