@@ -23,7 +23,7 @@ suite('Canvas extension', () => {
 	});
 
 	test('registers the New Canvas command', async () => {
-		const ext = vscode.extensions.all.find((e) => e.packageJSON.name === 'canvas');
+		const ext = vscode.extensions.getExtension('odlot-marco-lutz.odlot-canvas');
 		assert.ok(ext, 'extension is installed');
 		await ext.activate();
 		const commands = await vscode.commands.getCommands(true);

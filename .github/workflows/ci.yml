@@ -1,0 +1,32 @@
+# Runs every test suite on pull requests, so only passing code reaches main.
+name: CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck, lint, unit tests
+        run: npm test
+      - name: Install Chromium for webview tests
+        run: npx playwright install --with-deps chromium
+      - name: Webview tests
+        run: npm run test:webview
+      - name: VS Code integration tests
+        # VS Code needs a display; xvfb-run provides a virtual one.
+        run: xvfb-run -a npm run test:integration
