@@ -6,6 +6,7 @@ import { parseCanvas, serializeCanvas } from '../shared/validate';
 import { canvasConfig, notesFolder, vaultUri } from './vault';
 import { makeNonce } from './nonce';
 import { openFileBeside } from './openFile';
+import { droppedFiles, importFiles } from './drops';
 
 /** Files larger than this are shown truncated in text/code nodes. */
 const MAX_TEXT_BYTES = 256 * 1024;
@@ -158,19 +159,23 @@ class CanvasSession {
 				break;
 			}
 			case 'resolveDrop': {
-				const paths: string[] = [];
-				for (const raw of m.uris) {
-					try {
-						const uri = vscode.Uri.parse(raw.trim(), true);
-						if (uri.scheme === 'file' || uri.scheme === 'vscode-remote' || uri.scheme === this.document.uri.scheme) {
-							paths.push(this.toCanvasPath(uri));
-						}
-					} catch {
-						// ignore unparsable entries
-					}
+				const uris = await droppedFiles(m.uris, ['file', 'vscode-remote', this.document.uri.scheme]);
+				if (uris.length) {
+					this.post({ type: 'insertFiles', paths: uris.map((u) => this.toCanvasPath(u)), at: m.at });
 				}
-				if (paths.length) {
-					this.post({ type: 'insertFiles', paths, at: m.at });
+				break;
+			}
+			case 'importFiles': {
+				const dir = this.importDir();
+				if (!dir) {
+					void vscode.window.showWarningMessage('Canvas: save the canvas or open a folder before dropping files from outside VS Code.');
+					break;
+				}
+				try {
+					const uris = await importFiles(dir, m.files);
+					this.post({ type: 'insertFiles', paths: uris.map((u) => this.toCanvasPath(u)), at: m.at });
+				} catch (err) {
+					void vscode.window.showErrorMessage(`Canvas: could not copy the dropped files: ${err instanceof Error ? err.message : String(err)}`);
 				}
 				break;
 			}
@@ -199,6 +204,11 @@ class CanvasSession {
 	/** Folder that canvas-relative file paths are resolved against: the vault (see `vaultUri`). */
 	private baseDir(): vscode.Uri | undefined {
 		return vaultUri(this.document.uri);
+	}
+
+	/** Folder that files dropped from outside VS Code are copied into: next to the canvas, else the workspace root. */
+	private importDir(): vscode.Uri | undefined {
+		return this.document.uri.scheme === 'untitled' ? this.baseDir() : vscode.Uri.joinPath(this.document.uri, '..');
 	}
 
 	/**

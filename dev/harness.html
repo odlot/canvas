@@ -59,6 +59,12 @@
 						config = { ...config, vault: { name: 'Picked Vault', path: '/elsewhere/Picked Vault' } };
 						send({ type: 'config', config });
 						break;
+					case 'resolveDrop':
+						send({ type: 'insertFiles', paths: m.uris.map((u) => u.split('/').pop()), at: m.at });
+						break;
+					case 'importFiles':
+						send({ type: 'insertFiles', paths: m.files.map((f) => f.name), at: m.at });
+						break;
 					case 'pickFiles':
 						send({ type: 'insertFiles', paths: ['diagram.svg'], at: m.at });
 						break;

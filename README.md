@@ -44,11 +44,13 @@ The viewer remembers your page and zoom, and it reloads in place when the file c
 | New note | The toolbar |
 | Edit | Double-click a note (<kbd>Esc</kbd> or <kbd>⌘/Ctrl</kbd>+<kbd>Enter</kbd> to finish); double-click a group title or edge to label it |
 | Open | Double-click a file node (opens beside; PDFs open in the [PDF viewer](#pdf-viewer)) or a link node (opens the browser) |
-| Add files | Toolbar → File, or drag from the Explorer **while holding <kbd>Shift</kbd>** |
+| Add files | Toolbar → File, or drag from the Explorer or your file manager **while holding <kbd>Shift</kbd>**. Files from outside VS Code are copied next to the canvas |
 | Paste | URLs become link nodes, text becomes notes; copy/paste and <kbd>⌘/Ctrl</kbd>+<kbd>D</kbd> duplicate nodes |
 | Color | Toolbar color button: the 6 spec presets or a custom hex |
 | Delete | <kbd>Delete</kbd> / <kbd>Backspace</kbd> (also removes attached edges) |
 | Note → Markdown file | Select notes and click the toolbar's *Save as Markdown file* button (file with arrow) |
+
+VS Code reserves plain drops on an editor for opening the file, so a drop without <kbd>Shift</kbd> opens it in a tab; the canvas shows a reminder when that is about to happen. A dropped file whose name is taken next to the canvas gets a number (`photo 1.png`), unless the existing file is identical, which is then reused.
 
 ### Vault
 
