@@ -49,8 +49,10 @@ npm install
 npm run build          # bundle extension, webview, pdf worker into dist/
 npm run watch
 npm test               # typecheck + lint + unit tests (Vitest)
+npm run test:webview   # webview tests in headless Chromium (Playwright)
 npm run test:integration   # runs inside a downloaded VS Code
 npm run dev:harness    # run the webview in a normal browser with fixture data
+./validation.sh        # everything CI runs on pull requests, from a clean npm ci
 ```
 
 Press <kbd>F5</kbd> to launch an Extension Development Host with `test/fixtures` open. Open `sample.canvas` there.

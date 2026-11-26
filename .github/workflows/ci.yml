@@ -1,4 +1,5 @@
 # Runs every test suite on pull requests, so only passing code reaches main.
+# All steps live in validation.sh, so CI and local runs stay identical.
 name: CI
 
 on:
@@ -12,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,13 +21,4 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - name: Typecheck, lint, unit tests
-        run: npm test
-      - name: Install Chromium for webview tests
-        run: npx playwright install --with-deps chromium
-      - name: Webview tests
-        run: npm run test:webview
-      - name: VS Code integration tests
-        # VS Code needs a display; xvfb-run provides a virtual one.
-        run: xvfb-run -a npm run test:integration
+      - run: ./validation.sh
