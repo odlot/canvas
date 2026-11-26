@@ -29,11 +29,12 @@ import {
 	moveNodes,
 	removeElements,
 	resizeNode,
+	textToFileNode,
 	updateEdge,
 	updateNode,
 	withGroupChildren,
 } from '../shared/operations';
-import type { HostToWebview, ResolvedFile, WebviewToHost } from '../shared/protocol';
+import type { CanvasConfig, HostToWebview, ResolvedFile, WebviewToHost } from '../shared/protocol';
 import { SIDES, type Canvas, type CanvasColor, type CanvasNode, type FileNode, type Side } from '../shared/types';
 import { parseCanvas, type ValidationIssue } from '../shared/validate';
 import { icons } from './icons';
@@ -98,6 +99,9 @@ export class CanvasApp {
 	private readonly pendingEdge = svgEl('path', { class: 'edge-path pending', d: '' });
 	/** Nodes created from image files whose height should follow the image's aspect ratio once loaded. */
 	private readonly fitImage = new Set<string>();
+	private config: CanvasConfig = { newNoteFormat: 'text' };
+	/** Notes created in this session that become Markdown files on their first edit, if `newNoteFormat` says so. */
+	private readonly newNotes = new Set<string>();
 	private editing: string | undefined;
 	private gesture: Gesture | undefined;
 	private spaceDown = false;
@@ -118,6 +122,7 @@ export class CanvasApp {
 	private readonly zoomLabel: HTMLElement;
 	private readonly colorButton: HTMLButtonElement;
 	private readonly deleteButton: HTMLButtonElement;
+	private readonly toFileButton: HTMLButtonElement;
 	private readonly popover: HTMLElement;
 	private readonly banner: HTMLElement;
 	private readonly errorPanel: HTMLElement;
@@ -146,6 +151,7 @@ export class CanvasApp {
 				<button data-action="link" title="Add web link">${icons.link}<span>Link</span></button>
 				<button data-action="group" title="Add group (around selection)">${icons.group}<span>Group</span></button>
 				<span class="sep"></span>
+				<button data-action="to-file" title="Save as Markdown file: move selected notes into files in the vault" disabled>${icons.toFile}</button>
 				<button data-action="color" title="Color selection" disabled>${icons.color}</button>
 				<button data-action="delete" title="Delete selection (Del)" disabled>${icons.trash}</button>
 				<span class="sep"></span>
@@ -169,6 +175,7 @@ export class CanvasApp {
 		this.zoomLabel = q('.zoom-label');
 		this.colorButton = q('[data-action="color"]');
 		this.deleteButton = q('[data-action="delete"]');
+		this.toFileButton = q('[data-action="to-file"]');
 		this.popover = q('.popover');
 		this.banner = q('.banner');
 		this.errorPanel = q('.error-panel');
@@ -201,6 +208,28 @@ export class CanvasApp {
 			case 'insertFiles':
 				this.insertFiles(msg.paths, msg.at);
 				break;
+			case 'config':
+				this.config = msg.config;
+				break;
+			case 'resetFiles':
+				this.files.clear();
+				this.requested.clear();
+				for (const v of this.views.values()) {
+					v.key = '';
+				}
+				this.render();
+				break;
+			case 'noteFilesCreated': {
+				let next = this.canvas;
+				for (const { nodeId, path } of msg.files) {
+					next = textToFileNode(next, nodeId, path);
+					if (this.editing === nodeId) {
+						this.editing = undefined;
+					}
+				}
+				this.commit(next);
+				break;
+			}
 		}
 	}
 
@@ -614,6 +643,7 @@ export class CanvasApp {
 		const any = this.selNodes.size + this.selEdges.size > 0;
 		this.colorButton.disabled = !any || this.readonly;
 		this.deleteButton.disabled = !any || this.readonly;
+		this.toFileButton.disabled = this.readonly || !this.canvas.nodes.some((n) => n.type === 'text' && this.selNodes.has(n.id));
 		for (const b of this.root.querySelectorAll<HTMLButtonElement>('[data-action="note"],[data-action="file"],[data-action="link"],[data-action="group"]')) {
 			b.disabled = this.readonly;
 		}
@@ -962,6 +992,7 @@ export class CanvasApp {
 		const next = addEdge(addNode(this.canvas, node), { fromNode: from, fromSide, toNode: node.id, toSide });
 		this.clearSelection();
 		this.selNodes.add(node.id);
+		this.newNotes.add(node.id);
 		this.commit(next);
 		this.startEditing(node.id);
 	}
@@ -1186,6 +1217,9 @@ export class CanvasApp {
 			case 'group':
 				this.createGroup();
 				break;
+			case 'to-file':
+				this.saveNotesAsFiles([...this.selNodes]);
+				break;
 			case 'color':
 				this.openColorPopover(button);
 				break;
@@ -1251,7 +1285,17 @@ export class CanvasApp {
 		this.selectOnly([node.id]);
 		this.commit(addNode(this.canvas, node));
 		if (edit) {
+			this.newNotes.add(node.id);
 			this.startEditing(node.id);
+		}
+	}
+
+	/** Ask the host to write these text notes to Markdown files; it answers with `noteFilesCreated`. */
+	private saveNotesAsFiles(ids: Iterable<string>): void {
+		const set = new Set(ids);
+		const notes = this.canvas.nodes.flatMap((n) => (n.type === 'text' && set.has(n.id) ? [{ nodeId: n.id, text: n.text }] : []));
+		if (notes.length && !this.readonly) {
+			this.host.postMessage({ type: 'createNoteFiles', notes });
 		}
 	}
 
@@ -1348,6 +1392,10 @@ export class CanvasApp {
 				this.commit(updateNode(this.canvas, id, { text: ta.value }));
 			} else {
 				this.render();
+			}
+			// A freshly created note becomes a vault file once it has content; empty notes stay inline.
+			if (this.newNotes.delete(id) && this.config.newNoteFormat === 'markdownFile' && ta.value.trim()) {
+				this.saveNotesAsFiles([id]);
 			}
 		};
 		ta.addEventListener('blur', finish);

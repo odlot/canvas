@@ -29,6 +29,7 @@
 				window.__posted.push(m);
 				switch (m.type) {
 					case 'ready': {
+						send({ type: 'config', config: { newNoteFormat: params.get('newNoteFormat') || 'text' } });
 						const text = await (await fetch(FIXTURES + canvasFile)).text();
 						const { parse } = window.__harness;
 						send({ type: 'load', ...parse(text), text });
@@ -47,6 +48,10 @@
 						send({ type: 'file', file });
 						break;
 					}
+					case 'createNoteFiles':
+						// No real vault in the browser: pretend the notes were written as notes.md.
+						send({ type: 'noteFilesCreated', files: m.notes.map((n) => ({ nodeId: n.nodeId, path: 'notes.md' })) });
+						break;
 					case 'pickFiles':
 						send({ type: 'insertFiles', paths: ['diagram.svg'], at: m.at });
 						break;

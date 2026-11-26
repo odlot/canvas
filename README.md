@@ -35,8 +35,19 @@ Files on the canvas update live when they change on disk.
 | Paste | URLs become link nodes, text becomes notes; copy/paste and <kbd>⌘/Ctrl</kbd>+<kbd>D</kbd> duplicate nodes |
 | Color | Toolbar color button: the 6 spec presets or a custom hex |
 | Delete | <kbd>Delete</kbd> / <kbd>Backspace</kbd> (also removes attached edges) |
+| Note → Markdown file | Select notes and click the toolbar's *Save as Markdown file* button (file with arrow) |
 
-File paths are stored relative to the workspace folder, like an Obsidian vault. When resolving them, Canvas also tries the canvas's own folder and absolute paths.
+### Vault
+
+File paths are stored relative to the **vault**, like in Obsidian. When resolving them, Canvas also tries the canvas's own folder and absolute paths.
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `canvas.vault` | workspace folder | Folder where canvas files live. Absolute, `~/…`, or relative to the workspace folder. Run **Canvas: Select Vault Folder** to pick it. |
+| `canvas.notesFolder` | vault root | Subfolder of the vault where note files are created, e.g. `notes`. |
+| `canvas.newNoteFormat` | `text` | `text` keeps new notes inside the `.canvas` file. `markdownFile` saves each new note as a Markdown file in the vault once you finish writing it, and links the canvas to that file. |
+
+A note file is named after the note's first line (`# My idea` → `My idea.md`; `My idea 1.md` if that name is taken). The node keeps its position, size, color and connections. Double-click it to edit the file.
 
 If a file is not valid JSON Canvas, Canvas shows the spec violations and a button to open the file as text instead of rewriting it. Unknown properties are preserved, so files from other tools round-trip unchanged.
 
