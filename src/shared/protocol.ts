@@ -14,10 +14,22 @@ export interface ResolvedFile {
 	truncated?: boolean;
 }
 
+/** How new notes are stored: inline in the canvas, or as a Markdown file in the vault. */
+export type NewNoteFormat = 'text' | 'markdownFile';
+
+export interface CanvasConfig {
+	newNoteFormat: NewNoteFormat;
+}
+
 export type HostToWebview =
 	| { type: 'load'; canvas: Canvas | undefined; issues: ValidationIssue[]; text: string }
+	| { type: 'config'; config: CanvasConfig }
 	| { type: 'file'; file: ResolvedFile }
-	| { type: 'insertFiles'; paths: string[]; at?: { x: number; y: number } };
+	/** The vault changed: every resolved file is stale and must be requested again. */
+	| { type: 'resetFiles' }
+	| { type: 'insertFiles'; paths: string[]; at?: { x: number; y: number } }
+	/** Reply to `createNoteFiles`: text node id → vault path of the Markdown file now holding its text. */
+	| { type: 'noteFilesCreated'; files: { nodeId: string; path: string }[] };
 
 export type WebviewToHost =
 	| { type: 'ready' }
@@ -27,4 +39,6 @@ export type WebviewToHost =
 	| { type: 'openLink'; url: string }
 	| { type: 'pickFiles'; at: { x: number; y: number } }
 	| { type: 'resolveDrop'; uris: string[]; at: { x: number; y: number } }
-	| { type: 'openAsText' };
+	| { type: 'openAsText' }
+	/** Write each note's text to a new Markdown file in the vault. */
+	| { type: 'createNoteFiles'; notes: { nodeId: string; text: string }[] };

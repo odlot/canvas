@@ -10,6 +10,7 @@ import {
 	moveNodes,
 	removeElements,
 	resizeNode,
+	textToFileNode,
 	updateEdge,
 	updateNode,
 	withGroupChildren,
@@ -168,5 +169,23 @@ describe('duplicate', () => {
 	it('does not copy edges leading outside the selection', () => {
 		const { canvas } = duplicate(base(), ['a']);
 		expect(canvas.edges).toHaveLength(2);
+	});
+});
+
+describe('textToFileNode', () => {
+	it('replaces the text with a file reference, keeping id, geometry, color, z-order and edges', () => {
+		const c = base();
+		c.nodes[2] = { ...c.nodes[2], color: '3', custom: 'kept' };
+		const next = textToFileNode(c, 'b', 'notes/b.md');
+		expect(next.nodes.map((n) => n.id)).toEqual(['g', 'a', 'b', 'c']);
+		expect(next.nodes[2]).toEqual({ id: 'b', type: 'file', file: 'notes/b.md', x: 200, y: 10, width: 100, height: 60, color: '3', custom: 'kept' });
+		expect(next.edges).toEqual(c.edges);
+		expect(c.nodes[2].type).toBe('text');
+		expect(validateCanvas(next).filter((i) => i.severity === 'error')).toEqual([]);
+	});
+
+	it('leaves non-text nodes alone', () => {
+		const c = base();
+		expect(textToFileNode(c, 'g', 'x.md').nodes[0]).toEqual(c.nodes[0]);
 	});
 });

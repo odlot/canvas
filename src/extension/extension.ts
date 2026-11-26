@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 import { CanvasEditorProvider } from './canvasEditor';
+import { selectVault, vaultUri } from './vault';
 
 export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(
 		CanvasEditorProvider.register(context),
 		vscode.commands.registerCommand('canvas.new', async () => {
-			const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
+			const folder = vaultUri(vscode.window.activeTextEditor?.document.uri);
 			const target = await vscode.window.showSaveDialog({
 				defaultUri: folder ? vscode.Uri.joinPath(folder, 'Untitled.canvas') : undefined,
 				filters: { Canvas: ['canvas'] },
@@ -17,6 +18,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			await vscode.workspace.fs.writeFile(target, new TextEncoder().encode('{\n\t"nodes": [],\n\t"edges": []\n}\n'));
 			await vscode.commands.executeCommand('vscode.openWith', target, CanvasEditorProvider.viewType);
 		}),
+		vscode.commands.registerCommand('canvas.selectVault', selectVault),
 	);
 }
 

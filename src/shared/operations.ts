@@ -4,7 +4,7 @@
  * "replace the model, re-render" loop and tests stay trivial.
  */
 import { containsRect } from './geometry';
-import type { Canvas, CanvasEdge, CanvasNode, GroupNode, Side } from './types';
+import type { Canvas, CanvasEdge, CanvasNode, FileNode, GroupNode, Side } from './types';
 
 export const MIN_NODE_WIDTH = 60;
 export const MIN_NODE_HEIGHT = 40;
@@ -53,6 +53,25 @@ export function updateEdge(canvas: Canvas, id: string, patch: Partial<CanvasEdge
 	return {
 		...canvas,
 		edges: canvas.edges.map((e) => (e.id === id ? dropUndefined({ ...e, ...patch }) : e)),
+	};
+}
+
+/**
+ * Turn a text node into a file node pointing at `file`, keeping its id (so
+ * edges stay attached), geometry, color, z-order and unknown properties.
+ * Non-text nodes are left unchanged.
+ */
+export function textToFileNode(canvas: Canvas, id: string, file: string): Canvas {
+	return {
+		...canvas,
+		nodes: canvas.nodes.map((n) => {
+			if (n.id !== id || n.type !== 'text') {
+				return n;
+			}
+			const next: Partial<CanvasNode> = { ...n, type: 'file', file };
+			delete next.text;
+			return next as FileNode;
+		}),
 	};
 }
 

@@ -41,8 +41,44 @@
         "command": "canvas.new",
         "title": "New Canvas",
         "category": "Canvas"
+      },
+      {
+        "command": "canvas.selectVault",
+        "title": "Select Vault Folder",
+        "category": "Canvas"
       }
     ],
+    "configuration": {
+      "title": "Canvas",
+      "properties": {
+        "canvas.vault": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "markdownDescription": "Folder where canvas files live, like an Obsidian vault. File paths in a canvas are stored relative to it, and new note files are created in it. Absolute, `~/…`, or relative to the workspace folder. Empty uses the workspace folder. Use **Canvas: Select Vault Folder** to pick one."
+        },
+        "canvas.notesFolder": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "markdownDescription": "Folder inside the vault where Markdown files for notes are created, for example `notes`. Empty uses the vault root."
+        },
+        "canvas.newNoteFormat": {
+          "type": "string",
+          "default": "text",
+          "scope": "resource",
+          "enum": [
+            "text",
+            "markdownFile"
+          ],
+          "enumDescriptions": [
+            "New notes are stored as text inside the .canvas file.",
+            "New notes are saved as Markdown files in the vault (see `#canvas.notesFolder#`) when you finish writing them, and the canvas links to the file."
+          ],
+          "markdownDescription": "How new notes are stored."
+        }
+      }
+    },
     "menus": {
       "explorer/context": [
         {

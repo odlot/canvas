@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
 import { fileKind, isTextKind } from '../shared/fileKinds';
+import { normalizeFolder, noteTitle, uniqueNoteName } from '../shared/notes';
 import type { HostToWebview, ResolvedFile, WebviewToHost } from '../shared/protocol';
 import { parseCanvas, serializeCanvas } from '../shared/validate';
+import { canvasConfig, notesFolder, vaultUri } from './vault';
 
 /** Files larger than this are shown truncated in text/code nodes. */
 const MAX_TEXT_BYTES = 256 * 1024;
@@ -41,14 +43,7 @@ class CanvasSession {
 		private readonly panel: vscode.WebviewPanel,
 	) {
 		this.webview = panel.webview;
-		const roots = [vscode.Uri.joinPath(context.extensionUri, 'dist'), vscode.Uri.joinPath(context.extensionUri, 'media')];
-		for (const f of vscode.workspace.workspaceFolders ?? []) {
-			roots.push(f.uri);
-		}
-		if (document.uri.scheme !== 'untitled') {
-			roots.push(vscode.Uri.joinPath(document.uri, '..'));
-		}
-		this.webview.options = { enableScripts: true, localResourceRoots: roots };
+		this.webview.options = { enableScripts: true, localResourceRoots: this.resourceRoots() };
 		this.webview.html = this.html();
 
 		this.disposables.push(
@@ -65,8 +60,38 @@ class CanvasSession {
 				this.lastWrittenText = undefined;
 				this.sendLoad();
 			}),
+			vscode.workspace.onDidChangeConfiguration((e) => {
+				if (e.affectsConfiguration('canvas.vault', document.uri)) {
+					// Paths now resolve against a different folder: drop watchers and let the webview re-request everything.
+					this.webview.options = { enableScripts: true, localResourceRoots: this.resourceRoots() };
+					for (const w of this.watchers.values()) {
+						w.dispose();
+					}
+					this.watchers.clear();
+					this.post({ type: 'resetFiles' });
+				}
+				if (e.affectsConfiguration('canvas.newNoteFormat', document.uri)) {
+					this.post({ type: 'config', config: canvasConfig(document.uri) });
+				}
+			}),
 			panel.onDidDispose(() => this.dispose()),
 		);
+	}
+
+	/** Folders the webview may load images/PDFs from: the vault, workspace folders and the canvas's folder. */
+	private resourceRoots(): vscode.Uri[] {
+		const roots = [vscode.Uri.joinPath(this.context.extensionUri, 'dist'), vscode.Uri.joinPath(this.context.extensionUri, 'media')];
+		const vault = this.baseDir();
+		if (vault) {
+			roots.push(vault);
+		}
+		for (const f of vscode.workspace.workspaceFolders ?? []) {
+			roots.push(f.uri);
+		}
+		if (this.document.uri.scheme !== 'untitled') {
+			roots.push(vscode.Uri.joinPath(this.document.uri, '..'));
+		}
+		return roots;
 	}
 
 	private dispose(): void {
@@ -92,7 +117,11 @@ class CanvasSession {
 	private async onMessage(m: WebviewToHost): Promise<void> {
 		switch (m.type) {
 			case 'ready':
+				this.post({ type: 'config', config: canvasConfig(this.document.uri) });
 				this.sendLoad();
+				break;
+			case 'createNoteFiles':
+				await this.createNoteFiles(m.notes);
 				break;
 			case 'edit':
 				await this.applyEdit(serializeCanvas(m.canvas));
@@ -162,19 +191,15 @@ class CanvasSession {
 
 	// --- file resolution -------------------------------------------------
 
-	/** Folder that canvas-relative file paths are resolved against: the workspace folder, else the canvas's folder. */
+	/** Folder that canvas-relative file paths are resolved against: the vault (see `vaultUri`). */
 	private baseDir(): vscode.Uri | undefined {
-		const folder = vscode.workspace.getWorkspaceFolder(this.document.uri) ?? vscode.workspace.workspaceFolders?.[0];
-		if (folder) {
-			return folder.uri;
-		}
-		return this.document.uri.scheme === 'untitled' ? undefined : vscode.Uri.joinPath(this.document.uri, '..');
+		return vaultUri(this.document.uri);
 	}
 
 	/**
 	 * Candidate URIs for a canvas `file` path. Like Obsidian, paths are relative
-	 * to the workspace (vault) root; we also try the canvas's own folder and
-	 * absolute paths so hand-written canvases work.
+	 * to the vault root; we also try the canvas's own folder and absolute paths
+	 * so hand-written canvases work.
 	 */
 	private candidates(path: string): vscode.Uri[] {
 		const out: vscode.Uri[] = [];
@@ -229,6 +254,33 @@ class CanvasSession {
 		return uri.fsPath;
 	}
 
+	// --- note files ------------------------------------------------------
+
+	private async createNoteFiles(notes: { nodeId: string; text: string }[]): Promise<void> {
+		const vault = this.baseDir();
+		if (!vault) {
+			void vscode.window.showErrorMessage('Canvas: cannot create note files without a vault. Set "canvas.vault" or save the canvas first.');
+			return;
+		}
+		const sub = normalizeFolder(notesFolder(this.document.uri));
+		const folder = sub ? vscode.Uri.joinPath(vault, sub) : vault;
+		const files: { nodeId: string; path: string }[] = [];
+		try {
+			await vscode.workspace.fs.createDirectory(folder);
+			for (const note of notes) {
+				const name = await uniqueNoteName(noteTitle(note.text), (n) => exists(vscode.Uri.joinPath(folder, n)));
+				const uri = vscode.Uri.joinPath(folder, name);
+				await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(note.text.endsWith('\n') ? note.text : `${note.text}\n`));
+				files.push({ nodeId: note.nodeId, path: this.toCanvasPath(uri) });
+			}
+		} catch (err) {
+			void vscode.window.showErrorMessage(`Canvas: could not create note file: ${err instanceof Error ? err.message : String(err)}`);
+		}
+		if (files.length) {
+			this.post({ type: 'noteFilesCreated', files });
+		}
+	}
+
 	private watch(path: string): void {
 		if (this.watchers.has(path)) {
 			return;
@@ -274,6 +326,15 @@ class CanvasSession {
 	<script nonce="${nonce}" type="module" src="${asset('webview.js')}"></script>
 </body>
 </html>`;
+	}
+}
+
+async function exists(uri: vscode.Uri): Promise<boolean> {
+	try {
+		await vscode.workspace.fs.stat(uri);
+		return true;
+	} catch {
+		return false;
 	}
 }
 
