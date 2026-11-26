@@ -60,7 +60,7 @@
     "typecheck": "tsc -p .",
     "lint": "eslint src test",
     "test:unit": "vitest run",
-    "test:webview": "npm run build && vitest run --config vitest.webview.config.ts",
+    "test:webview": "npm run build && vitest run --config vitest.webview.config.mts",
     "compile-tests": "esbuild test/integration/*.ts --outdir=out/test/integration --platform=node --format=cjs --external:vscode --bundle",
     "test:integration": "npm run build && npm run compile-tests && vscode-test",
     "test": "npm run typecheck && npm run lint && npm run test:unit",
@@ -73,17 +73,19 @@
     "@types/vscode": "^1.146.0",
     "@vscode/test-cli": "^0.0.15",
     "@vscode/test-electron": "^3.0.0",
-    "@vscode/vsce": "^4.1.1",
+    "@vscode/vsce": "^4.1.2-3",
     "esbuild": "^0.28.2",
     "eslint": "^10.5.0",
     "playwright": "^1.65.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.74.0",
-    "vitest": "^3.2.7"
+    "vitest": "^5.1.2"
   },
   "overrides": {
     "diff": "^8.0.4",
-    "serialize-javascript": "^7.0.6"
+    "serialize-javascript": "^7.0.6",
+    "glob": "^14.0.6",
+    "minimatch": "^11.0.9"
   },
   "dependencies": {
     "dompurify": "^3.5.0",
@@ -99,5 +101,10 @@
     "notes",
     "obsidian"
   ],
-  "icon": "media/icon.png"
+  "icon": "media/icon.png",
+  "allowScripts": {
+    "esbuild": true,
+    "@vscode/vsce-sign": true,
+    "fsevents": false
+  }
 }
