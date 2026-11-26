@@ -991,11 +991,12 @@ export class CanvasApp {
 		if (this.readonly) {
 			return;
 		}
-		const t = e.target as Element;
+		// Pointer capture on the viewport (see startGesture) retargets dblclick to
+		// the viewport itself, so resolve the element actually under the cursor.
+		const t = document.elementFromPoint(e.clientX, e.clientY) ?? (e.target as Element);
 		if (t.closest('textarea, input, button, .pdf-nav, .handle, .resize')) {
 			return;
 		}
-		const world = this.worldPoint(e);
 		const edgeId = t.closest<SVGElement>('.edge')?.dataset.id ?? t.closest<HTMLElement>('.edge-label')?.dataset.edge;
 		if (edgeId) {
 			this.editEdgeLabel(edgeId);
@@ -1017,12 +1018,10 @@ export class CanvasApp {
 				case 'group':
 					if (t.closest('.node-label')) {
 						this.editGroupLabel(node.id);
-						return;
 					}
-					break; // double-click inside a group body creates a note there
+					return;
 			}
 		}
-		this.createTextNode(world, true);
 	}
 
 	private onKeyDown(e: KeyboardEvent): void {

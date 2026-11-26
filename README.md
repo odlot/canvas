@@ -28,7 +28,7 @@ Files on the canvas update live when they change on disk.
 | Select | Click; <kbd>Shift</kbd>+click to add; <kbd>Shift</kbd>+drag for box select; <kbd>⌘/Ctrl</kbd>+<kbd>A</kbd> |
 | Move / resize | Drag a node / drag its bottom-right corner; arrow keys nudge |
 | **Connect** | Drag from a side handle onto another node. Drop on empty space to create a connected note |
-| New note | Double-click empty space, or the toolbar |
+| New note | The toolbar |
 | Edit | Double-click a note (<kbd>Esc</kbd> or <kbd>⌘/Ctrl</kbd>+<kbd>Enter</kbd> to finish); double-click a group title or edge to label it |
 | Open | Double-click a file node (opens beside) or a link node (opens the browser) |
 | Add files | Toolbar → File, or drag from the Explorer **while holding <kbd>Shift</kbd>** |
