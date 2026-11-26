@@ -2,7 +2,7 @@
   "name": "odlot-canvas",
   "displayName": "Odlot Canvas",
   "description": "An infinite canvas for connecting your thoughts and ideas — a JSON Canvas 1.0 editor for VS Code.",
-  "version": "0.0.4",
+  "version": "0.0.7",
   "publisher": "odlot-marco-lutz",
   "engines": {
     "vscode": "^1.146.0"
