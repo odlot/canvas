@@ -26,6 +26,16 @@
           }
         ],
         "priority": "default"
+      },
+      {
+        "viewType": "canvas.pdf",
+        "displayName": "PDF Viewer (Canvas)",
+        "selector": [
+          {
+            "filenamePattern": "*.pdf"
+          }
+        ],
+        "priority": "option"
       }
     ],
     "languages": [

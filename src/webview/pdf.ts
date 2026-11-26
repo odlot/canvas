@@ -1,5 +1,6 @@
 import * as pdfjs from 'pdfjs-dist';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
+import { ensurePdfWorker } from './pdfWorker';
 
 declare global {
 	interface Window {
@@ -7,32 +8,12 @@ declare global {
 	}
 }
 
-let workerReady: Promise<void> | undefined;
-
-/**
- * Webview resources live on a different origin than the webview itself, so a
- * Worker can't be constructed from their URL directly. Fetch the worker script
- * and start it from a same-origin blob URL instead.
- */
-function ensureWorker(): Promise<void> {
-	workerReady ??= (async () => {
-		const src = window.CANVAS_PDF_WORKER;
-		if (!src) {
-			return;
-		}
-		const code = await (await fetch(src)).text();
-		const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
-		pdfjs.GlobalWorkerOptions.workerPort = new Worker(url);
-	})();
-	return workerReady;
-}
-
 const docs = new Map<string, Promise<PDFDocumentProxy>>();
 
 function loadDocument(uri: string): Promise<PDFDocumentProxy> {
 	let p = docs.get(uri);
 	if (!p) {
-		p = ensureWorker().then(async () => {
+		p = ensurePdfWorker(window.CANVAS_PDF_WORKER).then(async () => {
 			const data = new Uint8Array(await (await fetch(uri)).arrayBuffer());
 			return pdfjs.getDocument({ data, isEvalSupported: false }).promise;
 		});

@@ -1,3 +1,4 @@
+import { cpSync } from 'node:fs';
 import * as esbuild from 'esbuild';
 
 const production = process.argv.includes('--production');
@@ -36,6 +37,21 @@ const builds = [
 		entryPoints: { webview: 'src/webview/style.css' },
 		outdir: 'dist',
 	},
+	// PDF viewer (custom editor for .pdf files)
+	{
+		...common,
+		entryPoints: { pdfViewer: 'src/webview/pdfViewer/main.ts' },
+		outdir: 'dist',
+		platform: 'browser',
+		format: 'esm',
+		target: 'chrome120',
+	},
+	{
+		...common,
+		entryPoints: { pdfViewer: 'src/webview/pdfViewer/style.css' },
+		outdir: 'dist',
+		loader: { '.svg': 'dataurl', '.gif': 'dataurl' },
+	},
 	// pdf.js worker, started from a blob URL inside the webview
 	{
 		...common,
@@ -51,6 +67,11 @@ const builds = [
 // Dev-only helper for dev/harness.html (runs the webview in a plain browser).
 if (!production) {
 	builds.push({ ...common, sourcemap: false, entryPoints: { 'harness-parse': 'src/shared/validate.ts' }, outdir: 'dist', format: 'esm', platform: 'browser' });
+}
+
+// Character maps (CJK text) and the 14 standard fonts that PDFs may reference without embedding.
+for (const dir of ['cmaps', 'standard_fonts']) {
+	cpSync(`node_modules/pdfjs-dist/${dir}`, `dist/pdfjs/${dir}`, { recursive: true });
 }
 
 if (watch) {

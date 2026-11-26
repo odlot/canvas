@@ -1,54 +1,28 @@
-import { createReadStream, existsSync, statSync } from 'node:fs';
-import { createServer, type Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
-import { extname, join, normalize, resolve } from 'node:path';
 import { chromium, type Browser, type Page } from 'playwright';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { serveRepo, type StaticServer } from './server';
 
 // Drives dev/harness.html with real mouse input. Synthetic `dblclick` events
 // would bypass the pointer capture that the viewport takes on pointerdown,
 // which is exactly what retargeted double-clicks away from nodes before.
 
-const ROOT = resolve(__dirname, '../..');
-const MIME: Record<string, string> = {
-	'.html': 'text/html',
-	'.js': 'text/javascript',
-	'.css': 'text/css',
-	'.svg': 'image/svg+xml',
-	'.pdf': 'application/pdf',
-};
-
-let server: Server;
+let server: StaticServer;
 let browser: Browser;
 let page: Page;
-let base: string;
 
 beforeAll(async () => {
-	if (!existsSync(join(ROOT, 'dist/webview.js'))) {
-		throw new Error('dist/ is missing: run `npm run test:webview`, which builds first');
-	}
-	server = createServer((req, res) => {
-		const path = normalize(join(ROOT, decodeURIComponent(new URL(req.url!, 'http://x').pathname)));
-		if (!path.startsWith(ROOT) || !existsSync(path) || !statSync(path).isFile()) {
-			res.writeHead(404).end();
-			return;
-		}
-		res.writeHead(200, { 'content-type': MIME[extname(path)] ?? 'text/plain' });
-		createReadStream(path).pipe(res);
-	});
-	await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
-	base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+	server = await serveRepo();
 	browser = await chromium.launch();
 });
 
 afterAll(async () => {
 	await browser?.close();
-	await new Promise((r) => server?.close(r));
+	await server?.close();
 });
 
 beforeEach(async () => {
 	page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
-	await page.goto(`${base}/dev/harness.html`);
+	await page.goto(`${server.base}/dev/harness.html`);
 	await page.waitForSelector('.node[data-id="welcome"] .markdown');
 });
 
@@ -117,6 +91,13 @@ describe('double-click', () => {
 		const p = await pointIn('notes');
 		await page.mouse.dblclick(p.x, p.y);
 		await expect.poll(posted).toContainEqual({ type: 'openFile', path: 'notes.md', subpath: undefined });
+	});
+
+	it('opens a PDF file node (the host shows it in the PDF viewer)', async () => {
+		await page.waitForSelector('.node[data-id="pdf"] .pdf-page canvas');
+		const p = await pointIn('pdf');
+		await page.mouse.dblclick(p.x, p.y);
+		await expect.poll(posted).toContainEqual({ type: 'openFile', path: 'paper.pdf', subpath: undefined });
 	});
 
 	it('opens the URL of a link node', async () => {

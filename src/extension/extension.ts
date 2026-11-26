@@ -1,9 +1,11 @@
 import * as vscode from 'vscode';
 import { CanvasEditorProvider } from './canvasEditor';
+import { PdfEditorProvider } from './pdfEditor';
 
 export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(
 		CanvasEditorProvider.register(context),
+		PdfEditorProvider.register(context),
 		vscode.commands.registerCommand('canvas.new', async () => {
 			const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
 			const target = await vscode.window.showSaveDialog({
