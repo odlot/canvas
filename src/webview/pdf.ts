@@ -34,7 +34,7 @@ function loadDocument(uri: string): Promise<PDFDocumentProxy> {
 	if (!p) {
 		p = ensureWorker().then(async () => {
 			const data = new Uint8Array(await (await fetch(uri)).arrayBuffer());
-			return pdfjs.getDocument({ data, isEvalSupported: false }).promise;
+			return pdfjs.getDocument({ data }).promise;
 		});
 		docs.set(uri, p);
 		p.catch(() => docs.delete(uri));
@@ -120,7 +120,7 @@ export class PdfView {
 		}
 		this.canvas.width = Math.floor(viewport.width);
 		this.canvas.height = Math.floor(viewport.height);
-		await page.render({ canvasContext: this.canvas.getContext('2d')!, viewport }).promise;
+		await page.render({ canvas: this.canvas, viewport }).promise;
 		this.label.textContent = `${this.page} / ${this.pages}`;
 	}
 }
