@@ -4,6 +4,7 @@
 
 - Every change must be made in its own git worktree.
 Never edit files directly in the main checkout.
+- Do not push anything.
 
 ## Compatibility
 
