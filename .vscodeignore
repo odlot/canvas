@@ -11,8 +11,8 @@ vsc-extension-quickstart.md
 **/eslint.config.mjs
 **/.vscode-test.*
 esbuild.mjs
-vitest.config.ts
-vitest.webview.config.ts
+vitest.config.mts
+vitest.webview.config.mts
 dev/**
 dist/harness-parse.js
 package.sh
