@@ -67,7 +67,7 @@
     "dev:harness": "npm run build && echo 'open http://localhost:8765/dev/harness.html' && python3 -m http.server 8765"
   },
   "devDependencies": {
-    "@types/dompurify": "^3.0.5",
+    "@types/dompurify": "^3.2.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "24.x",
     "@types/vscode": "^1.146.0",
