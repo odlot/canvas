@@ -19,17 +19,51 @@ const MAX_TEXT_BYTES = 256 * 1024;
 export class CanvasEditorProvider implements vscode.CustomTextEditorProvider {
 	static readonly viewType = 'canvas.editor';
 
+	/** Open canvases, most recently active last. */
+	private readonly sessions: CanvasSession[] = [];
+
 	constructor(private readonly context: vscode.ExtensionContext) {}
 
-	static register(context: vscode.ExtensionContext): vscode.Disposable {
-		return vscode.window.registerCustomEditorProvider(CanvasEditorProvider.viewType, new CanvasEditorProvider(context), {
-			webviewOptions: { retainContextWhenHidden: true },
-			supportsMultipleEditorsPerDocument: true,
-		});
+	static register(context: vscode.ExtensionContext): CanvasEditorProvider {
+		const provider = new CanvasEditorProvider(context);
+		context.subscriptions.push(
+			vscode.window.registerCustomEditorProvider(CanvasEditorProvider.viewType, provider, {
+				webviewOptions: { retainContextWhenHidden: true },
+				supportsMultipleEditorsPerDocument: true,
+			}),
+		);
+		return provider;
 	}
 
 	async resolveCustomTextEditor(document: vscode.TextDocument, panel: vscode.WebviewPanel): Promise<void> {
-		new CanvasSession(this.context, document, panel);
+		const session = new CanvasSession(this.context, document, panel);
+		const touch = (): void => {
+			this.forget(session);
+			this.sessions.push(session);
+		};
+		touch();
+		panel.onDidChangeViewState(() => panel.active && touch());
+		panel.onDidDispose(() => this.forget(session));
+	}
+
+	/**
+	 * Add files to the canvas the user is working in: the active one, else the
+	 * one used last. Returns false when no canvas is open.
+	 */
+	async addFiles(uris: readonly vscode.Uri[]): Promise<boolean> {
+		const session = this.sessions.at(-1);
+		if (!session) {
+			return false;
+		}
+		await session.addFiles(uris);
+		return true;
+	}
+
+	private forget(session: CanvasSession): void {
+		const i = this.sessions.indexOf(session);
+		if (i >= 0) {
+			this.sessions.splice(i, 1);
+		}
 	}
 }
 
@@ -105,6 +139,18 @@ class CanvasSession {
 			w.dispose();
 		}
 		this.watchers.clear();
+	}
+
+	/** Insert files (e.g. picked in the Explorer) at the centre of the view and bring the canvas to the front. */
+	async addFiles(uris: readonly vscode.Uri[]): Promise<void> {
+		const files = await droppedFiles(
+			uris.map((u) => u.toString()),
+			uris.map((u) => u.scheme),
+		);
+		if (files.length) {
+			this.panel.reveal(undefined, false);
+			this.post({ type: 'insertFiles', paths: files.map((u) => this.toCanvasPath(u)) });
+		}
 	}
 
 	private post(message: HostToWebview): void {

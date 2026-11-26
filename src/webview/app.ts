@@ -147,7 +147,7 @@ export class CanvasApp {
 					<div class="layer labels"></div>
 				</div>
 				<div class="box" hidden></div>
-				<div class="empty-hint" hidden>Add a note from the toolbar · drop files with <kbd>Shift</kbd> held</div>
+				<div class="empty-hint" hidden>Add a note from the toolbar · <kbd>Shift</kbd>-drop files from Finder · right-click files in the Explorer → Add to Canvas</div>
 			</div>
 			<div class="toolbar" role="toolbar">
 				<button data-action="vault" class="vault-label">${icons.folder}<span></span></button>

@@ -1,4 +1,7 @@
 import * as assert from 'node:assert';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import * as vscode from 'vscode';
 import { openFileBeside } from '../../src/extension/openFile';
 
@@ -65,6 +68,32 @@ suite('Canvas extension', () => {
 			return t?.input instanceof vscode.TabInputText ? t : undefined;
 		});
 		assert.strictEqual((mdTab.input as vscode.TabInputText).uri.toString(), fixture('notes.md').toString());
+	});
+
+	test('Add to Canvas inserts Explorer files into the open canvas', async () => {
+		const dir = mkdtempSync(join(tmpdir(), 'canvas-add-'));
+		const uri = vscode.Uri.file(join(dir, 'board.canvas'));
+		writeFileSync(uri.fsPath, '{\n\t"nodes": [],\n\t"edges": []\n}\n');
+		try {
+			await vscode.commands.executeCommand('vscode.openWith', uri, 'canvas.editor');
+			const doc = await vscode.workspace.openTextDocument(uri);
+			// The webview must be up to receive the insert; `ready` triggers the first load.
+			await new Promise((r) => setTimeout(r, 1500));
+
+			await vscode.commands.executeCommand('canvas.addToCanvas', fixture('notes.md'), [fixture('notes.md'), fixture('diagram.svg')]);
+
+			const nodes = await waitFor(() => {
+				const n = (JSON.parse(doc.getText()) as { nodes: { type: string; file?: string }[] }).nodes;
+				return n.length ? n : undefined;
+			});
+			assert.deepStrictEqual(nodes.map((n) => [n.type, n.file]), [
+				['file', 'notes.md'],
+				['file', 'diagram.svg'],
+			]);
+			await vscode.commands.executeCommand('workbench.action.files.revert');
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
 	});
 
 	test('external edits to the document keep it valid and undoable', async () => {

@@ -56,6 +56,11 @@
         "command": "canvas.selectVault",
         "title": "Select Vault Folder",
         "category": "Canvas"
+      },
+      {
+        "command": "canvas.addToCanvas",
+        "title": "Add to Canvas",
+        "category": "Canvas"
       }
     ],
     "configuration": {
@@ -94,6 +99,17 @@
         {
           "command": "canvas.new",
           "group": "navigation@9"
+        },
+        {
+          "command": "canvas.addToCanvas",
+          "when": "!explorerResourceIsFolder",
+          "group": "navigation@10"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "canvas.addToCanvas",
+          "when": "false"
         }
       ]
     }
