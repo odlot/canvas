@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
 import { CanvasEditorProvider } from './canvasEditor';
 import { selectVault, vaultUri } from './vault';
+import { PdfEditorProvider } from './pdfEditor';
 
 export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(
 		CanvasEditorProvider.register(context),
+		PdfEditorProvider.register(context),
 		vscode.commands.registerCommand('canvas.new', async () => {
 			const folder = vaultUri(vscode.window.activeTextEditor?.document.uri);
 			const target = await vscode.window.showSaveDialog({

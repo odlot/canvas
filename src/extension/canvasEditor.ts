@@ -4,6 +4,8 @@ import { normalizeFolder, noteTitle, uniqueNoteName } from '../shared/notes';
 import type { HostToWebview, ResolvedFile, WebviewToHost } from '../shared/protocol';
 import { parseCanvas, serializeCanvas } from '../shared/validate';
 import { canvasConfig, notesFolder, vaultUri } from './vault';
+import { makeNonce } from './nonce';
+import { openFileBeside } from './openFile';
 
 /** Files larger than this are shown truncated in text/code nodes. */
 const MAX_TEXT_BYTES = 256 * 1024;
@@ -133,7 +135,7 @@ class CanvasSession {
 			case 'openFile': {
 				const uri = await this.locate(m.path);
 				if (uri) {
-					await vscode.commands.executeCommand('vscode.open', uri, { preview: false, viewColumn: vscode.ViewColumn.Beside });
+					await openFileBeside(uri);
 				} else {
 					void vscode.window.showWarningMessage(`Canvas: file not found: ${m.path}`);
 				}
@@ -341,11 +343,3 @@ async function exists(uri: vscode.Uri): Promise<boolean> {
 	}
 }
 
-function makeNonce(): string {
-	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-	let s = '';
-	for (let i = 0; i < 32; i++) {
-		s += chars.charAt(Math.floor(Math.random() * chars.length));
-	}
-	return s;
-}

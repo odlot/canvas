@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<!--
+	Browser harness for the PDF viewer webview, without VS Code.
+	Serve the repo root (e.g. `npm run dev:harness`) and open /dev/pdf-harness.html.
+	It plays the extension host: announces the file and serves byte ranges.
+
+	Query parameters:
+	  src=<url>      PDF to show (default: test/fixtures/paper.pdf)
+	  initial=<n>    bytes sent with the `open` message (default: like the host)
+	  chunk=<n>      pdf.js range chunk size
+-->
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>PDF viewer harness</title>
+	<link rel="stylesheet" href="../dist/pdfViewer.css">
+</head>
+<body class="vscode-dark">
+	<div id="app"></div>
+	<script>
+		const params = new URLSearchParams(location.search);
+		const src = params.get('src') || '../test/fixtures/paper.pdf';
+		window.PDF_VIEWER_CONFIG = {
+			worker: '../dist/pdf.worker.js',
+			cMapUrl: '../dist/pdfjs/cmaps/',
+			standardFontDataUrl: '../dist/pdfjs/standard_fonts/',
+			wasmUrl: '../dist/pdfjs/wasm/',
+			iccUrl: '../dist/pdfjs/iccs/',
+			rangeChunkSize: params.has('chunk') ? Number(params.get('chunk')) : undefined,
+		};
+		// Mirrors src/shared/pdfProtocol.ts.
+		const initialLength = (n) => (params.has('initial') ? Math.min(n, Number(params.get('initial'))) : n <= 2 * 1024 * 1024 ? n : 64 * 1024);
+		window.__ranges = [];
+		window.__posted = [];
+		let state;
+		let bytes;
+		let generation = 0;
+		const send = (m) => window.postMessage(m, '*');
+		/** Announce the file (again), as the host does on open and when it changes on disk. */
+		window.__reload = async () => {
+			bytes = new Uint8Array(await (await fetch(src)).arrayBuffer());
+			generation++;
+			send({ type: 'open', generation, name: src.split('/').pop(), length: bytes.length, initial: bytes.slice(0, initialLength(bytes.length)) });
+		};
+		window.acquireVsCodeApi = () => ({
+			getState: () => state,
+			setState: (s) => { state = s; },
+			postMessage(m) {
+				window.__posted.push(m);
+				switch (m.type) {
+					case 'ready':
+						void window.__reload();
+						break;
+					case 'range':
+						window.__ranges.push([m.begin, m.end]);
+						if (m.generation === generation) {
+							send({ type: 'range', generation, begin: m.begin, data: bytes.slice(m.begin, m.end) });
+						}
+						break;
+				}
+			},
+		});
+	</script>
+	<script type="module" src="../dist/pdfViewer.js"></script>
+</body>
+</html>
