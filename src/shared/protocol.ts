@@ -40,7 +40,6 @@ export type WebviewToHost =
 	| { type: 'openFile'; path: string; subpath?: string }
 	| { type: 'openLink'; url: string }
 	| { type: 'pickFiles'; at: { x: number; y: number } }
-	| { type: 'resolveDrop'; uris: string[]; at: { x: number; y: number } }
 	| { type: 'openAsText' }
 	/** Let the user pick a different vault folder. */
 	| { type: 'selectVault' }

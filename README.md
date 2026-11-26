@@ -44,7 +44,7 @@ The viewer remembers your page and zoom, and it reloads in place when the file c
 | New note | The toolbar |
 | Edit | Double-click a note (<kbd>Esc</kbd> or <kbd>⌘/Ctrl</kbd>+<kbd>Enter</kbd> to finish); double-click a group title or edge to label it |
 | Open | Double-click a file node (opens beside; PDFs open in the [PDF viewer](#pdf-viewer)) or a link node (opens the browser) |
-| Add files | Toolbar → File, or drag from the Explorer **while holding <kbd>Shift</kbd>** |
+| Add files | <kbd>⌥⌘P</kbd> / <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd> to fuzzy-find a workspace file (like Quick Open); Toolbar → File; or right-click files in the Explorer → **Add to Canvas** |
 | Paste | URLs become link nodes, text becomes notes; copy/paste and <kbd>⌘/Ctrl</kbd>+<kbd>D</kbd> duplicate nodes |
 | Color | Toolbar color button: the 6 spec presets or a custom hex |
 | Delete | <kbd>Delete</kbd> / <kbd>Backspace</kbd> (also removes attached edges) |

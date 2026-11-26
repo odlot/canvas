@@ -73,6 +73,8 @@ type Gesture =
 	| { kind: 'box'; start: Point; current: Point; base: Set<string> };
 
 const DRAG_THRESHOLD = 3;
+/** Shortcut of the "Canvas: Add File from Workspace…" command (see package.json). */
+const ADD_FILE_KEYS = /Mac/.test(navigator.userAgent) ? '<kbd>⌥⌘P</kbd>' : '<kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd>';
 const ARROW = 12;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -144,7 +146,7 @@ export class CanvasApp {
 					<div class="layer labels"></div>
 				</div>
 				<div class="box" hidden></div>
-				<div class="empty-hint" hidden>Add a note from the toolbar · drop files with <kbd>Shift</kbd> held</div>
+				<div class="empty-hint" hidden>Add a note from the toolbar · add a file with ${ADD_FILE_KEYS}</div>
 			</div>
 			<div class="toolbar" role="toolbar">
 				<button data-action="vault" class="vault-label">${icons.folder}<span></span></button>
@@ -722,13 +724,6 @@ export class CanvasApp {
 		vp.addEventListener('pointercancel', () => this.cancelGesture());
 		vp.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
 		vp.addEventListener('dblclick', (e) => this.onDoubleClick(e));
-		vp.addEventListener('dragover', (e) => {
-			e.preventDefault();
-			if (e.dataTransfer) {
-				e.dataTransfer.dropEffect = 'copy';
-			}
-		});
-		vp.addEventListener('drop', (e) => this.onDrop(e));
 		window.addEventListener('keydown', (e) => this.onKeyDown(e));
 		window.addEventListener('keyup', (e) => {
 			if (e.code === 'Space') {
@@ -1126,32 +1121,6 @@ export class CanvasApp {
 		}
 	}
 
-	private onDrop(e: DragEvent): void {
-		e.preventDefault();
-		if (this.readonly || !e.dataTransfer) {
-			return;
-		}
-		const at = this.worldPoint(e);
-		const list = e.dataTransfer.getData('application/vnd.code.uri-list') || e.dataTransfer.getData('text/uri-list');
-		const uris = list
-			.split(/\r?\n/)
-			.map((s) => s.trim())
-			.filter((s) => s && !s.startsWith('#'));
-		if (uris.length) {
-			const files = uris.filter((u) => !/^https?:/i.test(u));
-			const links = uris.filter((u) => /^https?:/i.test(u));
-			if (files.length) {
-				this.host.postMessage({ type: 'resolveDrop', uris: files, at });
-			}
-			links.forEach((url, i) => this.createLinkNode(url, { x: at.x + i * 30, y: at.y + i * 30 }));
-			return;
-		}
-		const text = e.dataTransfer.getData('text/plain');
-		if (text) {
-			this.insertText(text, at);
-		}
-	}
-
 	private onCopy(e: ClipboardEvent): boolean {
 		const t = e.target as HTMLElement;
 		if (t.closest?.('textarea, input') || !this.selNodes.size || window.getSelection()?.toString()) {
@@ -1178,7 +1147,7 @@ export class CanvasApp {
 		this.insertText(text, this.viewCenter());
 	}
 
-	/** Insert pasted/dropped text: a canvas fragment, a URL, or a plain note. */
+	/** Insert pasted text: a canvas fragment, a URL, or a plain note. */
 	private insertText(text: string, at: Point): void {
 		const trimmed = text.trim();
 		if (trimmed.startsWith('{')) {

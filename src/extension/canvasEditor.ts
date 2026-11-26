@@ -6,6 +6,7 @@ import { parseCanvas, serializeCanvas } from '../shared/validate';
 import { canvasConfig, notesFolder, vaultUri } from './vault';
 import { makeNonce } from './nonce';
 import { openFileBeside } from './openFile';
+import { onlyFiles, pickWorkspaceFile } from './files';
 
 /** Files larger than this are shown truncated in text/code nodes. */
 const MAX_TEXT_BYTES = 256 * 1024;
@@ -18,17 +19,67 @@ const MAX_TEXT_BYTES = 256 * 1024;
 export class CanvasEditorProvider implements vscode.CustomTextEditorProvider {
 	static readonly viewType = 'canvas.editor';
 
+	/** Open canvases, most recently active last. */
+	private readonly sessions: CanvasSession[] = [];
+
 	constructor(private readonly context: vscode.ExtensionContext) {}
 
-	static register(context: vscode.ExtensionContext): vscode.Disposable {
-		return vscode.window.registerCustomEditorProvider(CanvasEditorProvider.viewType, new CanvasEditorProvider(context), {
-			webviewOptions: { retainContextWhenHidden: true },
-			supportsMultipleEditorsPerDocument: true,
-		});
+	static register(context: vscode.ExtensionContext): CanvasEditorProvider {
+		const provider = new CanvasEditorProvider(context);
+		context.subscriptions.push(
+			vscode.window.registerCustomEditorProvider(CanvasEditorProvider.viewType, provider, {
+				webviewOptions: { retainContextWhenHidden: true },
+				supportsMultipleEditorsPerDocument: true,
+			}),
+		);
+		return provider;
 	}
 
 	async resolveCustomTextEditor(document: vscode.TextDocument, panel: vscode.WebviewPanel): Promise<void> {
-		new CanvasSession(this.context, document, panel);
+		const session = new CanvasSession(this.context, document, panel);
+		const touch = (): void => {
+			this.forget(session);
+			this.sessions.push(session);
+		};
+		touch();
+		panel.onDidChangeViewState(() => panel.active && touch());
+		panel.onDidDispose(() => this.forget(session));
+	}
+
+	/**
+	 * Add files to the canvas the user is working in: the active one, else the
+	 * one used last. Returns false when no canvas is open.
+	 */
+	async addFiles(uris: readonly vscode.Uri[]): Promise<boolean> {
+		const session = this.sessions.at(-1);
+		if (!session) {
+			return false;
+		}
+		await session.addFiles(uris);
+		return true;
+	}
+
+	/**
+	 * Fuzzy-find a workspace file and add it to the canvas the user is working
+	 * in. Returns false when no canvas is open.
+	 */
+	async pickAndAddFile(): Promise<boolean> {
+		const session = this.sessions.at(-1);
+		if (!session) {
+			return false;
+		}
+		const uri = await pickWorkspaceFile(session.uri);
+		if (uri) {
+			await session.addFiles([uri]);
+		}
+		return true;
+	}
+
+	private forget(session: CanvasSession): void {
+		const i = this.sessions.indexOf(session);
+		if (i >= 0) {
+			this.sessions.splice(i, 1);
+		}
 	}
 }
 
@@ -37,6 +88,9 @@ class CanvasSession {
 	private readonly watchers = new Map<string, vscode.Disposable>();
 	/** Text we last wrote, so we don't echo our own edits back to the webview. */
 	private lastWrittenText: string | undefined;
+	/** Resolves once the webview has loaded and listens for messages. */
+	private readonly ready: Promise<void>;
+	private markReady!: () => void;
 	private readonly webview: vscode.Webview;
 
 	constructor(
@@ -45,6 +99,7 @@ class CanvasSession {
 		private readonly panel: vscode.WebviewPanel,
 	) {
 		this.webview = panel.webview;
+		this.ready = new Promise((r) => (this.markReady = r));
 		this.webview.options = { enableScripts: true, localResourceRoots: this.resourceRoots() };
 		this.webview.html = this.html();
 
@@ -106,6 +161,21 @@ class CanvasSession {
 		this.watchers.clear();
 	}
 
+	get uri(): vscode.Uri {
+		return this.document.uri;
+	}
+
+	/** Insert files (e.g. picked in the Explorer) at the centre of the view and bring the canvas to the front. */
+	async addFiles(uris: readonly vscode.Uri[]): Promise<void> {
+		const files = await onlyFiles(uris);
+		if (files.length) {
+			this.panel.reveal(undefined, false);
+			// A canvas that was just opened may not be listening yet.
+			await this.ready;
+			this.post({ type: 'insertFiles', paths: files.map((u) => this.toCanvasPath(u)) });
+		}
+	}
+
 	private post(message: HostToWebview): void {
 		void this.webview.postMessage(message);
 	}
@@ -121,6 +191,7 @@ class CanvasSession {
 			case 'ready':
 				this.post({ type: 'config', config: canvasConfig(this.document.uri) });
 				this.sendLoad();
+				this.markReady();
 				break;
 			case 'createNoteFiles':
 				await this.createNoteFiles(m.notes);
@@ -154,23 +225,6 @@ class CanvasSession {
 				});
 				if (picked?.length) {
 					this.post({ type: 'insertFiles', paths: picked.map((u) => this.toCanvasPath(u)), at: m.at });
-				}
-				break;
-			}
-			case 'resolveDrop': {
-				const paths: string[] = [];
-				for (const raw of m.uris) {
-					try {
-						const uri = vscode.Uri.parse(raw.trim(), true);
-						if (uri.scheme === 'file' || uri.scheme === 'vscode-remote' || uri.scheme === this.document.uri.scheme) {
-							paths.push(this.toCanvasPath(uri));
-						}
-					} catch {
-						// ignore unparsable entries
-					}
-				}
-				if (paths.length) {
-					this.post({ type: 'insertFiles', paths, at: m.at });
 				}
 				break;
 			}
@@ -250,7 +304,7 @@ class CanvasSession {
 		return { path, exists: true, uri: this.webview.asWebviewUri(uri).toString() };
 	}
 
-	/** Path to store in the canvas for a picked/dropped file: workspace-relative with forward slashes. */
+	/** Path to store in the canvas for a picked file: workspace-relative with forward slashes. */
 	private toCanvasPath(uri: vscode.Uri): string {
 		const base = this.baseDir();
 		if (base && uri.path.startsWith(base.path.replace(/\/$/, '') + '/')) {
