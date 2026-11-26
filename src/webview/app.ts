@@ -37,6 +37,7 @@ import type { HostToWebview, ResolvedFile, WebviewToHost } from '../shared/proto
 import { SIDES, type Canvas, type CanvasColor, type CanvasNode, type FileNode, type Side } from '../shared/types';
 import { parseCanvas, type ValidationIssue } from '../shared/validate';
 import { icons } from './icons';
+import { indentEdit } from './indent';
 import { escapeHtml, highlight, renderMarkdown } from './markdown';
 import { PdfView } from './pdf';
 
@@ -1355,6 +1356,10 @@ export class CanvasApp {
 			if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) {
 				e.preventDefault();
 				ta.blur();
+			} else if (e.key === 'Tab' && !e.altKey && !e.ctrlKey && !e.metaKey) {
+				// Keep focus in the editor: Tab indents instead of moving focus (which would blur and end editing).
+				e.preventDefault();
+				applyIndent(ta, e.shiftKey);
 			}
 		});
 		ta.focus({ preventScroll: true });
@@ -1526,4 +1531,18 @@ function canScroll(el: HTMLElement, e: WheelEvent): boolean {
 		return true;
 	}
 	return e.deltaX > 0 && el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+}
+
+/** Applies Tab / Shift+Tab indentation to a textarea, keeping it on the native undo stack. */
+function applyIndent(ta: HTMLTextAreaElement, outdent: boolean): void {
+	const edit = indentEdit(ta.value, ta.selectionStart, ta.selectionEnd, outdent);
+	if (!edit) {
+		return;
+	}
+	ta.setSelectionRange(edit.from, edit.to);
+	// execCommand keeps the change undoable with Cmd/Ctrl+Z; setRangeText is the fallback.
+	if (!document.execCommand('insertText', false, edit.insert)) {
+		ta.setRangeText(edit.insert, edit.from, edit.to);
+	}
+	ta.setSelectionRange(edit.selectionStart, edit.selectionEnd);
 }
